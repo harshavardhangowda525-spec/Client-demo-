@@ -13,7 +13,7 @@ Status key: ✅ = implemented and covered by automated tests; 🟡 = implemented
 | Podcast site | Home, studio overview, facilities (no invented specs), services, packages, locations, availability calendar, booking, gallery, FAQs, contact, booking status, account | ✅ | |
 | Events site | Home, services, categories, packages, gallery, venues, enquiry form, consultation booking, enquiry status (accept/decline proposals), FAQs, contact, booking status, account | ✅ | Enquiries are never bookings |
 | Design | Three distinct token-based themes, responsive layout, focus styles, reduced motion, skip links | ✅ | axe WCAG 2.1 AA scans pass on 11 key pages |
-| Imagery | 24 AI-generated sample images (Floot), lazy and responsive | 🟡 | Generated, but this environment's network policy blocks the Floot host, so the sites currently show labelled placeholders. Run `pnpm images:fetch` where the host is reachable. |
+| Imagery | 24 AI-generated sample images (Floot), lazy-loaded responsive WebP, committed to the repo | ✅ | Labelled as AI-generated sample imagery |
 | Booking engine | Server-side date, duration and opening-hours validation; lead time and advance window; resource allocation; buffers; holds with expiry; status machine; history; reschedule | ✅ | |
 | Conflict prevention | Advisory locks, in-transaction re-check and a PostgreSQL exclusion constraint | ✅ | Tested with 8 concurrent requests for one slot |
 | Pricing | Fixed, hourly, packages, add-ons (fixed or per hour), discounts, configurable fees, tax and deposits, custom quotations, itemised breakdown | ✅ | All values are samples |
@@ -43,7 +43,6 @@ These were **not** run: load or performance tests, cross-browser runs (Chromium 
 
 ## Known issues and limitations
 
-- **Images:** placeholders are shown until `pnpm images:fetch` succeeds (see above).
 - **Expired holds** are released lazily, when availability is read or a booking is created. Add a one-minute scheduled job in production.
 - **Rate limiting** is per process. Use Redis when scaling horizontally.
 - **Delivery callbacks** for email and SMS (`DELIVERED` status) are not wired yet.

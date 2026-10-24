@@ -5,6 +5,7 @@ import './theme.css';
 import { AuthPanel } from '@studio/ui';
 import { getMe } from '@studio/ui/server';
 import { AdminShell } from '../components/AdminShell';
+import { SignOutButton } from '../components/SignOutButton';
 
 // Every page shows live data (availability, prices, bookings), so nothing is prerendered at build time.
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <main className="container section" style={{ maxWidth: 560 }}>
         <h1>Studio admin</h1>
         <p className="muted">Sign in with a staff account. Demo: <span className="mono">admin@demo.example</span> / <span className="mono">DemoAdmin!2026</span></p>
-        <AuthPanel emailDelivery={false} />
+        <AuthPanel emailDelivery={false} allowRegister={false} demoAccount={{ email: 'admin@demo.example', password: 'DemoAdmin!2026', label: 'Demo administrator' }} />
       </main>
     );
   } else if (!me.user.isStaff) {
@@ -27,6 +28,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <main className="container section">
         <h1>Not authorised</h1>
         <p>This account ({me.user.email}) does not have access to the admin panel.</p>
+        <p className="muted">Sign out, then sign in with a staff account (demo: <span className="mono">admin@demo.example</span> / <span className="mono">DemoAdmin!2026</span>).</p>
+        <SignOutButton label="Sign out and use a staff account" />
       </main>
     );
   } else {

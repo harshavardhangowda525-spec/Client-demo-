@@ -11,7 +11,7 @@ States are computed by the API from server configuration and recorded live check
 | Push notifications | **Not configured** | Provider to be chosen with the mobile app (e.g. FCM) | The adapter reports *not configured* |
 | Google Maps embed | **Not configured** | `GOOGLE_MAPS_EMBED_API_KEY` (referrer-restricted) | Location pages show the stored address only. No map, directions, distances or travel times. Demo locations never show a map. |
 | Email verification / password reset delivery | **Simulation** | Same as Email | Links appear in the notification preview inbox (development only) |
-| Sample imagery (Floot) | **Generated; not yet downloaded in this environment** | Network access to the Floot asset host, or files supplied manually | Labelled placeholders. Run `pnpm images:fetch`. |
+| Sample imagery (Floot) | **Downloaded and committed** (24 images, WebP 640/1024 px) | Run `pnpm images:fetch` again only to refresh them | Labelled placeholders appear for any missing image |
 
 Delivery status semantics: `PREVIEW_ONLY` means not sent. `ACCEPTED` means the provider accepted the message, which is **not** proof of delivery. `DELIVERED` is set only by a provider delivery callback (not yet wired). `FAILED` records the provider's error.
 

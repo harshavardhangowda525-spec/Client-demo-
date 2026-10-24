@@ -16,7 +16,13 @@ export interface AccountBooking {
 export interface AccountEnquiry { reference: string; eventType: string; preferredDate: string; status: string }
 export interface AccountPayment { bookingReference: string; type: string; status: string; amountMinor: number; currency: string; isSimulated: boolean; at: string }
 
-export function AuthPanel({ next, emailDelivery, adminUrl }: { next?: string; emailDelivery: boolean; adminUrl?: string }) {
+export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true }: {
+  next?: string;
+  emailDelivery: boolean;
+  adminUrl?: string;
+  demoAccount?: { email: string; password: string; label: string };
+  allowRegister?: boolean;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<'signin' | 'register' | 'forgot'>('signin');
   const [name, setName] = useState('');
@@ -58,7 +64,7 @@ export function AuthPanel({ next, emailDelivery, adminUrl }: { next?: string; em
     router.refresh();
   }
 
-  const tabs: [typeof mode, string][] = [['signin', 'Sign in'], ['register', 'Create account'], ['forgot', 'Forgot password']];
+  const tabs = ([['signin', 'Sign in'], ['register', 'Create account'], ['forgot', 'Forgot password']] as [typeof mode, string][]).filter(([m]) => allowRegister || m !== 'register');
   return (
     <div className="card" style={{ maxWidth: 520 }}>
       <div className="filters" role="tablist" aria-label="Account options">
@@ -87,7 +93,7 @@ export function AuthPanel({ next, emailDelivery, adminUrl }: { next?: string; em
       </form>
       <hr />
       <p className="small muted" style={{ margin: 0 }}>
-        Demo customer: <span className="mono">customer@demo.example</span> / <span className="mono">DemoCustomer!2026</span>
+        {demoAccount.label}: <span className="mono">{demoAccount.email}</span> / <span className="mono">{demoAccount.password}</span>
         {adminUrl && <> · Staff use the <a href={adminUrl}>admin panel</a>.</>}
       </p>
     </div>

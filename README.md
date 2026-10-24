@@ -39,10 +39,10 @@ Then open http://localhost:3001, http://localhost:3002, http://localhost:3003 an
 
 ### Sample imagery
 
-The images were generated with Floot and are listed in `assets/demo-images/catalog.json`. Download them with:
+The images were generated with Floot, are listed in `assets/demo-images/catalog.json`, and are already committed under `assets/demo-images/generated/`. To re-download them:
 
 ```bash
-pnpm images:fetch      # writes responsive WebP files + manifest to assets/demo-images/generated/
+NODE_USE_ENV_PROXY=1 pnpm images:fetch   # the variable is only needed behind an HTTP proxy
 ```
 
 Until the images are downloaded, every image slot shows a labelled, art-directed placeholder.
