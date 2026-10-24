@@ -86,7 +86,7 @@ export async function getLocations(brand: Brand, db: Db = prisma) {
     where: { isActive: true, brands: { has: brand } },
     include: {
       openingHours: { where: { resourceId: null }, orderBy: [{ dayOfWeek: 'asc' }, { openMinute: 'asc' }] },
-      resources: { where: { isActive: true }, orderBy: { name: 'asc' } },
+      resources: { where: { isActive: true, services: { some: { service: { brand } } } }, orderBy: { name: 'asc' } },
     },
     orderBy: { name: 'asc' },
   });

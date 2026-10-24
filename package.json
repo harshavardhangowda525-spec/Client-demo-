@@ -3,7 +3,9 @@
   "private": true,
   "description": "Infinity Web & Apps client demonstration: three websites, shared API, booking engine and admin panel.",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -28,6 +30,7 @@
     "prettier": "^3.6.2",
     "turbo": "^2.11.10",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0"
+    "typescript-eslint": "^8.46.0",
+    "sharp": "^0.34.4"
   }
 }
