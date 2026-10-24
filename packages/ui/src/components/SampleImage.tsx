@@ -21,7 +21,7 @@ export function SampleImage({ imageKey, alt, ratio = '4x3', sizes = '(min-width:
   const img = resolveImage(imageKey, alt);
   const cls = ['media', ratio !== 'auto' ? `media--${ratio}` : '', hover ? 'media--hover' : '', className ?? ''].filter(Boolean).join(' ');
   return (
-    <div className={cls}>
+    <div className={cls} style={ratio === 'auto' ? { aspectRatio: `${img.width} / ${img.height}` } : undefined}>
       {tag && <span className="badge badge--demo media__tag">Sample image</span>}
       {img.src ? (
         <img
