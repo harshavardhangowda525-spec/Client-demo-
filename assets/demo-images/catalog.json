@@ -1,0 +1,34 @@
+{
+  "$comment": "AI-generated SAMPLE imagery created with Floot image generation for the Infinity Web & Apps demo. Not real client work. Run `pnpm images:fetch` to download into ./generated.",
+  "source": {
+    "provider": "Floot (AI image generation)",
+    "project": "Infinity Billion-Dollar Vision",
+    "baseUrl": "https://8708599d-ddf8-4808-a02a-8f69c61d3056.sandbox.floot.app"
+  },
+  "images": {
+    "photo-hero": { "path": "/_cdn/static/32fec19d-80c5-4e81-b72d-638312144abd.png", "w": 1024, "h": 576, "alt": "Photographer silhouetted in a dark studio under a single warm light (AI-generated sample image)" },
+    "photo-portrait": { "path": "/_cdn/static/152635f9-9332-4e4a-b25f-2696da42efb1.png", "w": 768, "h": 1024, "alt": "Studio portrait of a woman in a charcoal blazer against a warm white backdrop (AI-generated sample image)" },
+    "photo-product": { "path": "/_cdn/static/6deeb8aa-2c6f-4dc8-9f98-3b824c26cca4.png", "w": 1024, "h": 1024, "alt": "Minimal glass bottle on a travertine plinth with soft directional light (AI-generated sample image)" },
+    "photo-commercial": { "path": "/_cdn/static/31b89595-d7a3-4163-8fb6-3c6b9505da21.png", "w": 1024, "h": 768, "alt": "Behind the scenes of a commercial shoot in a white cyclorama studio (AI-generated sample image)" },
+    "photo-event": { "path": "/_cdn/static/fae077d0-179a-467d-9b6c-64e77e30880c.png", "w": 1024, "h": 768, "alt": "Guests laughing at an evening reception under warm string lights (AI-generated sample image)" },
+    "video-promo": { "path": "/_cdn/static/cc30fed2-cfac-4cf5-ad0f-2a0e9a5b31aa.png", "w": 1024, "h": 576, "alt": "Cinema camera on a slider filming a moody café scene (AI-generated sample image)" },
+    "video-corporate": { "path": "/_cdn/static/f982e131-1aa7-4e03-9474-2e3c171fdc2d.png", "w": 1024, "h": 768, "alt": "Corporate interview set-up in a softly lit office (AI-generated sample image)" },
+    "photo-architecture": { "path": "/_cdn/static/f96665c4-b144-4782-8e94-a2e38f7d998d.png", "w": 768, "h": 1024, "alt": "Sunlit concrete stairwell with dramatic shadows (AI-generated sample image)" },
+    "podcast-hero": { "path": "/_cdn/static/79bf79ce-4fde-4904-9be3-4e30de6c88d2.png", "w": 1024, "h": 576, "alt": "Podcast studio at night with two microphones over a walnut desk and navy acoustic panels (AI-generated sample image)" },
+    "podcast-video": { "path": "/_cdn/static/b975476b-5263-43ec-a06a-7fee8d848b74.png", "w": 1024, "h": 768, "alt": "Two hosts recording a video podcast on a navy and grey set (AI-generated sample image)" },
+    "podcast-mic": { "path": "/_cdn/static/da3a0e72-99b2-484f-ab71-5d480ef58aca.png", "w": 768, "h": 1024, "alt": "Close-up of a studio microphone with pop filter against a navy background (AI-generated sample image)" },
+    "podcast-control": { "path": "/_cdn/static/c53b439e-fda3-4a3d-94cf-e3d640a2753e.png", "w": 1024, "h": 768, "alt": "Audio editing suite with mixing console and studio monitors (AI-generated sample image)" },
+    "podcast-multicam": { "path": "/_cdn/static/9c4c97cf-897b-4181-a753-793d8698d972.png", "w": 1024, "h": 768, "alt": "Multi-camera podcast set with three cameras facing a round table (AI-generated sample image)" },
+    "podcast-lounge": { "path": "/_cdn/static/2899e419-23c5-4cb3-a1ce-7085c85269c6.png", "w": 1024, "h": 768, "alt": "Studio lounge with grey sofa, warm lamp and navy accent wall (AI-generated sample image)" },
+    "podcast-booth": { "path": "/_cdn/static/90b5e442-d433-4889-865f-9597a14a9eb6.png", "w": 768, "h": 1024, "alt": "Compact solo recording booth with microphone and headphones (AI-generated sample image)" },
+    "podcast-detail": { "path": "/_cdn/static/b3734eb8-a0d9-40d3-970b-53f9bf0ab951.png", "w": 1024, "h": 1024, "alt": "Overhead view of a podcast desk with headphones, notebook and coffee (AI-generated sample image)" },
+    "events-hero": { "path": "/_cdn/static/8375cf46-6a12-4845-9ec2-f8d976175520.png", "w": 1024, "h": 576, "alt": "Grand hall set for an evening gala with ivory linens and burgundy florals (AI-generated sample image)" },
+    "events-corporate": { "path": "/_cdn/static/eb8b778b-c0f2-4085-87d5-229840924b43.png", "w": 1024, "h": 768, "alt": "Audience seated at a corporate conference facing a softly lit stage (AI-generated sample image)" },
+    "events-celebration": { "path": "/_cdn/static/0f7ee66e-cb4b-4606-9b70-0ffc37ed2533.png", "w": 1024, "h": 768, "alt": "Garden celebration at dusk with festoon lights and guests toasting (AI-generated sample image)" },
+    "events-workshop": { "path": "/_cdn/static/92c346af-dc65-4a1d-b13e-cd1d9ccd3e6a.png", "w": 1024, "h": 768, "alt": "Workshop participants around long tables in a bright loft (AI-generated sample image)" },
+    "events-launch": { "path": "/_cdn/static/9d21aa64-3a83-4d47-b93e-6ab57d9cec3a.png", "w": 1024, "h": 1024, "alt": "Product launch stage with a draped plinth under a spotlight (AI-generated sample image)" },
+    "events-dinner": { "path": "/_cdn/static/f3a5d4f4-5183-4545-b243-56e2dcff3a16.png", "w": 1024, "h": 1024, "alt": "Private dinner table with burgundy dahlias and gold cutlery (AI-generated sample image)" },
+    "events-venue": { "path": "/_cdn/static/a43c2adf-b7e9-45fb-9e2f-5bcf7c242d4b.png", "w": 1024, "h": 768, "alt": "Empty venue with ivory chairs and a floral arch before an event (AI-generated sample image)" },
+    "events-detail": { "path": "/_cdn/static/5e6657e1-4e47-44d8-99d5-73b46f64bcc2.png", "w": 1024, "h": 1024, "alt": "Event décor details: gold-rimmed glassware, burgundy ribbon and ivory roses (AI-generated sample image)" }
+  }
+}

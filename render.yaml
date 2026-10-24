@@ -1,0 +1,100 @@
+# One-click demo deployment on Render (render.com → New + → Blueprint).
+# Creates: PostgreSQL + API + three websites + admin panel.
+#
+# Public URLs are https://<service name>.onrender.com. If Render reports a name
+# as taken and appends a suffix, update the URLs in the "infinity-demo-urls"
+# environment group (Dashboard → Env Groups) and redeploy the services.
+
+databases:
+  - name: infinity-demo-db
+    plan: free
+    region: singapore
+    databaseName: studio
+    user: studio
+
+envVarGroups:
+  - name: infinity-demo-urls
+    envVars:
+      - key: SITE_URL_PHOTO
+        value: https://infinity-demo-photo.onrender.com
+      - key: SITE_URL_PODCAST
+        value: https://infinity-demo-podcast.onrender.com
+      - key: SITE_URL_EVENTS
+        value: https://infinity-demo-events.onrender.com
+      - key: SITE_URL_ADMIN
+        value: https://infinity-demo-admin.onrender.com
+      - key: API_INTERNAL_URL
+        value: https://infinity-demo-api.onrender.com
+      - key: NODE_VERSION
+        value: "22"
+
+services:
+  # Shared API. Applies migrations and loads demo data (only into an empty database) on start.
+  - type: web
+    name: infinity-demo-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/api build
+    startCommand: (cd packages/db && ./node_modules/.bin/prisma migrate deploy) && (cd packages/core && ./node_modules/.bin/tsx src/seed/run.ts --if-empty) && node apps/api/dist/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: infinity-demo-urls
+      - key: DATABASE_URL
+        fromDatabase:
+          name: infinity-demo-db
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_URL
+        value: https://infinity-demo-api.onrender.com
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: PAYMENTS_MODE
+        value: demo
+      - key: NOTIFICATION_PREVIEWS
+        value: "true"
+      - key: ALLOW_DEMO_SEED
+        value: "true"
+
+  - type: web
+    name: infinity-demo-photo
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-photo exec next build
+    startCommand: cd apps/web-photo && ./node_modules/.bin/next start -p $PORT
+    envVars:
+      - fromGroup: infinity-demo-urls
+
+  - type: web
+    name: infinity-demo-podcast
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-podcast exec next build
+    startCommand: cd apps/web-podcast && ./node_modules/.bin/next start -p $PORT
+    envVars:
+      - fromGroup: infinity-demo-urls
+
+  - type: web
+    name: infinity-demo-events
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-events exec next build
+    startCommand: cd apps/web-events && ./node_modules/.bin/next start -p $PORT
+    envVars:
+      - fromGroup: infinity-demo-urls
+
+  - type: web
+    name: infinity-demo-admin
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/admin exec next build
+    startCommand: cd apps/admin && ./node_modules/.bin/next start -p $PORT
+    envVars:
+      - fromGroup: infinity-demo-urls

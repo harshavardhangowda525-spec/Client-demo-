@@ -1,0 +1,31 @@
+{
+  "name": "@studio/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas.ts",
+    "./money": "./src/money.ts",
+    "./status": "./src/booking/status.ts",
+    "./seed": "./src/seed/run.ts"
+  },
+  "scripts": {
+    "test": "dotenv -e ../../.env -- vitest run",
+    "seed": "dotenv -e ../../.env -- tsx src/seed/run.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@date-fns/tz": "^1.5.0",
+    "@studio/db": "workspace:*",
+    "better-auth": "1.7.12",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "dotenv-cli": "^10.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}
