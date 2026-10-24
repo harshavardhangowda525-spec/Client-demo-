@@ -22,7 +22,8 @@ export interface NotifyInput {
 export async function notify(input: NotifyInput, db: Db = prisma): Promise<Notification> {
   const channel = input.channel ?? 'EMAIL';
   const adapter = ADAPTERS[channel];
-  const { subject, text } = renderTemplate(input.template, input.data);
+  const override = await db.notificationTemplate.findUnique({ where: { key: input.template } }).catch(() => null);
+  const { subject, text } = renderTemplate(input.template, input.data, override?.isActive ? override : null);
   const configured = adapter.isConfigured();
 
   const record = await db.notification.create({

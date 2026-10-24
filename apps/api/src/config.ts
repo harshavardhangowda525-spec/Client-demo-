@@ -29,6 +29,7 @@ export function apiConfig(): ApiConfig {
     core.SITE_URL_PHOTO,
     core.SITE_URL_PODCAST,
     core.SITE_URL_EVENTS,
+    core.SITE_URL_STUDIO,
     core.SITE_URL_ADMIN,
     parsed.BETTER_AUTH_URL,
     ...(parsed.CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? []),

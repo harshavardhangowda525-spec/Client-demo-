@@ -20,6 +20,7 @@ const envSchema = z.object({
   SITE_URL_PHOTO: z.string().url().default('http://localhost:3001'),
   SITE_URL_PODCAST: z.string().url().default('http://localhost:3002'),
   SITE_URL_EVENTS: z.string().url().default('http://localhost:3003'),
+  SITE_URL_STUDIO: z.string().url().default('http://localhost:3004'),
   SITE_URL_ADMIN: z.string().url().default('http://localhost:3100'),
 });
 
@@ -49,7 +50,7 @@ export function notificationPreviewsEnabled(): boolean {
   return env.NODE_ENV !== 'production';
 }
 
-export function siteUrl(brand: 'PHOTO' | 'PODCAST' | 'EVENTS'): string {
+export function siteUrl(brand: 'PHOTO' | 'PODCAST' | 'EVENTS' | 'STUDIO'): string {
   const env = getEnv();
-  return { PHOTO: env.SITE_URL_PHOTO, PODCAST: env.SITE_URL_PODCAST, EVENTS: env.SITE_URL_EVENTS }[brand];
+  return { PHOTO: env.SITE_URL_PHOTO, PODCAST: env.SITE_URL_PODCAST, EVENTS: env.SITE_URL_EVENTS, STUDIO: env.SITE_URL_STUDIO }[brand];
 }

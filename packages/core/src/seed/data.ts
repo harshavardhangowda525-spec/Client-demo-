@@ -239,6 +239,39 @@ export const services: SeedService[] = [
     bookingMode: 'REQUEST', pricingModel: 'FIXED', basePriceMinor: rupees(30000), minDurationMin: 180, maxDurationMin: 360, durationStepMin: 60, defaultDurationMin: 180, bufferMin: 30,
     requiresResource: true, imageKey: 'podcast-control', locations: ['blr-studio'], resources: ['pod-video-set'], addOns: ['video-editing', 'social-clips'],
   },
+  // --- Additional studio services listed in the studio-platform brief (sample values) ---
+  {
+    key: 'photo-studio-rental', brand: 'PHOTO', category: 'photography', slug: 'photography-studio-rental', name: 'Photography studio rental',
+    summary: 'Hire a lit studio by the hour for your own shoot.',
+    description: 'Self-operated studio hire for photographers and creators. Bring your own camera; studio facilities are listed once verified by the business.',
+    bookingMode: 'DIRECT', pricingModel: 'HOURLY', hourlyRateMinor: rupees(2000), minDurationMin: 60, maxDurationMin: 480, durationStepMin: 60, defaultDurationMin: 120, bufferMin: 30,
+    requiresResource: true, imageKey: 'photo-commercial', locations: ['blr-studio'], resources: ['cyc-a', 'daylight-b'], addOns: ['hair-makeup'],
+  },
+  {
+    key: 'interview-recording', brand: 'PODCAST', category: 'recording', slug: 'interview-recording', name: 'Interview recording',
+    summary: 'Two-person interviews captured on audio and video.',
+    description: 'A set-up for interviews and conversations with audio and camera coverage. Equipment details are placeholders until confirmed.',
+    bookingMode: 'DIRECT', pricingModel: 'HOURLY', hourlyRateMinor: rupees(3000), minDurationMin: 60, maxDurationMin: 240, durationStepMin: 30, defaultDurationMin: 90, bufferMin: 30,
+    requiresResource: true, imageKey: 'podcast-video', locations: ['blr-studio', 'bom-studio'], resources: ['pod-video-set', 'pod-multicam'], addOns: ['audio-editing', 'video-editing'],
+  },
+  {
+    key: 'youtube-content', brand: 'PODCAST', category: 'production', slug: 'youtube-content-production', name: 'YouTube content production',
+    summary: 'Batch-record videos for your channel in one studio day.',
+    description: 'Plan, record and receive edited videos for your channel. Submitted as a request so the team can confirm format and crew before payment.',
+    bookingMode: 'REQUEST', pricingModel: 'FIXED', basePriceMinor: rupees(25000), minDurationMin: 240, maxDurationMin: 480, durationStepMin: 60, defaultDurationMin: 240, bufferMin: 60,
+    requiresResource: true, imageKey: 'podcast-multicam', locations: ['blr-studio', 'bom-studio'], resources: ['pod-video-set', 'pod-multicam'], addOns: ['video-editing', 'social-clips'],
+    packages: [
+      { slug: 'half-day', name: 'Half-day batch', description: 'Record several short videos in one session.', includes: ['4-hour studio session', 'Camera operator', 'Raw files'], priceMinor: rupees(25000), durationMin: 240 },
+      { slug: 'full-day', name: 'Full-day batch', description: 'A full production day for a larger batch.', includes: ['8-hour studio session', 'Camera operator', 'Raw files'], priceMinor: rupees(42000), durationMin: 480, isFeatured: true },
+    ],
+  },
+  {
+    key: 'brand-campaign', brand: 'PHOTO', category: 'videography', slug: 'brand-and-advertising-shoots', name: 'Brand & advertising shoots',
+    summary: 'Campaigns, multi-day shoots and custom projects, priced by quotation.',
+    description: 'Large brand campaigns, multi-day shoots and complex productions are scoped individually. Send a project brief and the team will prepare a tailored quotation.',
+    bookingMode: 'ENQUIRY', pricingModel: 'QUOTE', minDurationMin: 60, maxDurationMin: 1440, durationStepMin: 30, defaultDurationMin: 480, bufferMin: 60,
+    requiresResource: true, imageKey: 'video-promo', locations: ['blr-studio'], resources: ['cyc-a', 'crew-1', 'crew-2'], addOns: [],
+  },
   // --- Events ----------------------------------------------------------------------
   {
     key: 'consultation', brand: 'EVENTS', category: 'planning', slug: 'planning-consultation', name: 'Event planning consultation',
@@ -322,6 +355,16 @@ const commonFaqs = (brandName: string) => [
 ];
 
 export const faqs: Record<Brand, { q: string; a: string }[]> = {
+  STUDIO: [
+    { q: 'How do I book a studio session?', a: 'Choose a service, pick a package or duration, select a date and an available start time, then enter your details. Standard sessions are reserved immediately while you pay the deposit; some services are submitted as requests for the team to confirm. (Sample answer: the business will confirm its process.)' },
+    { q: 'What equipment is included?', a: 'Each service page lists the facilities linked to it. Equipment marked "awaiting verification" will be confirmed by the studio; we do not publish specifications that have not been verified.' },
+    { q: 'Can I bring my own camera or recording equipment?', a: 'Studio rental services are self-operated and assume you bring your own camera. For other services, please mention it in your booking notes. (Sample answer to be confirmed.)' },
+    { q: 'Are editing services included?', a: 'Editing is included only where a package says so. Otherwise it can be added as an add-on, shown with its price before you book.' },
+    { q: 'How long is each session?', a: 'Each service shows its minimum and maximum duration and the available package lengths. Hourly services can be booked in the steps shown on the booking panel.' },
+    { q: 'What is the cancellation policy?', a: 'See the cancellation and refund policy page. Until the business publishes its final policy, paid bookings can be submitted as a cancellation request for the team to review.' },
+    { q: 'Can I request a custom package?', a: 'Yes. Use "Request a quote" to send a project brief. The team reviews it and sends an itemised quotation; nothing is booked until you accept it.' },
+    { q: 'How do I reschedule my booking?', a: 'Open your booking from the confirmation link or your account and choose "Request a new time". Your original slot stays reserved until the team approves the change.' },
+  ],
   PHOTO: [
     ...commonFaqs('Lumen Studio'),
     { q: 'Do you photograph on location?', a: 'Event photography and video production can take place on location. The crew is scheduled through the same availability system as the studios.' },
@@ -337,3 +380,77 @@ export const faqs: Record<Brand, { q: string; a: string }[]> = {
     { q: 'Can I book anything directly?', a: 'Yes. Planning consultations have a fixed price and can be booked directly from the Booking page. Full events are quoted individually.' },
   ],
 };
+
+// --- Studio discovery platform --------------------------------------------------------
+
+export const discoveryCategories = [
+  { slug: 'photography', name: 'Photography', description: 'Portrait, fashion, product and commercial photography.', imageKey: 'photo-portrait' },
+  { slug: 'videography', name: 'Videography', description: 'Promotional films, interviews and corporate video.', imageKey: 'video-promo' },
+  { slug: 'podcasting', name: 'Podcast Studio', description: 'Audio and video podcast recording.', imageKey: 'podcast-hero' },
+  { slug: 'video-production', name: 'Video Production', description: 'Directed, multi-camera and channel content production.', imageKey: 'podcast-multicam' },
+  { slug: 'studio-rental', name: 'Studio Rental', description: 'Hire studio space by the hour.', imageKey: 'podcast-booth' },
+  { slug: 'product-shoots', name: 'Product Shoots', description: 'Catalogue and campaign product imagery.', imageKey: 'photo-product' },
+  { slug: 'commercial-production', name: 'Commercial Production', description: 'Brand campaigns and advertising shoots.', imageKey: 'photo-commercial' },
+];
+
+/** Service key → discovery category slugs. */
+export const serviceDiscovery: Record<string, string[]> = {
+  portrait: ['photography'],
+  product: ['photography', 'product-shoots'],
+  commercial: ['photography', 'commercial-production'],
+  'event-photo': ['photography'],
+  'promo-video': ['videography', 'video-production', 'commercial-production'],
+  'corporate-video': ['videography', 'video-production'],
+  'audio-recording': ['podcasting'],
+  'video-podcast': ['podcasting', 'videography'],
+  multicam: ['podcasting', 'video-production'],
+  'studio-rental': ['podcasting', 'studio-rental'],
+  'custom-production': ['podcasting', 'video-production'],
+  'photo-studio-rental': ['photography', 'studio-rental'],
+  'interview-recording': ['videography', 'podcasting'],
+  'youtube-content': ['video-production', 'videography'],
+  'brand-campaign': ['commercial-production', 'videography', 'photography'],
+};
+
+export const featuredServices = ['portrait', 'video-podcast', 'promo-video', 'product', 'photo-studio-rental'];
+
+export const servicePreparation: Record<string, string> = {
+  portrait: 'Bring two or three outfits and any styling references. Arrive 10 minutes early. (Sample guidance: to be confirmed by the studio.)',
+  product: 'Send the product list in advance and bring clean, unpackaged items. (Sample guidance.)',
+  'video-podcast': 'Share the episode format and number of guests when booking. (Sample guidance.)',
+  'audio-recording': 'Headphones are provided; arrive with your running order. (Sample guidance.)',
+  'photo-studio-rental': 'Self-operated: bring your own camera. Studio facilities will be listed once verified. (Sample guidance.)',
+};
+
+export const serviceGallery: Record<string, string[]> = {
+  portrait: ['photo-hero', 'photo-architecture'],
+  product: ['photo-commercial'],
+  'video-podcast': ['podcast-multicam', 'podcast-detail'],
+  'audio-recording': ['podcast-hero', 'podcast-detail'],
+  'promo-video': ['video-corporate'],
+  'photo-studio-rental': ['photo-hero'],
+};
+
+/** Facilities and equipment. Unverified: generic descriptions only, no models or specifications. */
+export const equipment = [
+  { key: 'cyclorama', name: 'Cyclorama wall', category: 'Studio space', imageKey: 'photo-commercial', services: ['portrait', 'product', 'commercial', 'photo-studio-rental', 'brand-campaign'] },
+  { key: 'lighting', name: 'Studio lighting', category: 'Lighting', imageKey: 'photo-hero', services: ['portrait', 'product', 'commercial', 'photo-studio-rental', 'promo-video'] },
+  { key: 'backdrops', name: 'Photography backdrops', category: 'Studio space', imageKey: 'photo-portrait', services: ['portrait', 'photo-studio-rental'] },
+  { key: 'mics', name: 'Podcast microphones', category: 'Audio', imageKey: 'podcast-mic', services: ['audio-recording', 'video-podcast', 'multicam', 'studio-rental', 'interview-recording'] },
+  { key: 'mixing', name: 'Audio recording desk', category: 'Audio', imageKey: 'podcast-control', services: ['audio-recording', 'video-podcast', 'multicam', 'custom-production'] },
+  { key: 'cameras', name: 'Multi-camera video set-up', category: 'Video', imageKey: 'podcast-multicam', services: ['video-podcast', 'multicam', 'interview-recording', 'youtube-content'] },
+  { key: 'booth', name: 'Acoustically treated rooms', category: 'Studio space', imageKey: 'podcast-booth', services: ['audio-recording', 'studio-rental'] },
+  { key: 'lounge', name: 'Guest lounge', category: 'Amenities', imageKey: 'podcast-lounge', services: [] },
+];
+
+export const banners = [
+  { title: 'Studio photography, booked in minutes', subtitle: 'Portraits, products and campaigns with live availability and itemised pricing.', imageKey: 'photo-hero', ctaLabel: 'Explore photography', ctaHref: '/services/photography' },
+  { title: 'Record your podcast in a treated studio', subtitle: 'Audio and video podcast sessions across two studio locations.', imageKey: 'podcast-hero', ctaLabel: 'Book podcast studio', ctaHref: '/services/podcasting' },
+  { title: 'Films and video production', subtitle: 'Promotional films, interviews and channel content.', imageKey: 'video-promo', ctaLabel: 'See video services', ctaHref: '/services/video-production' },
+];
+
+export const contentPages = [
+  { slug: 'privacy', title: 'Privacy policy', body: 'TEMPLATE FOR REVIEW. This placeholder has not been approved by the business.\n\nWhat we collect: the details you enter when you book, enquire or contact us (name, email, optional phone, project details and any files you attach).\n\nHow we use it: to manage your booking or enquiry and to contact you about it. We do not sell your data.\n\nPayments are handled by the payment provider; this website never stores full card details.\n\nYou can update your profile from your account and ask us to correct or delete your information, subject to legal record-keeping requirements.' },
+  { slug: 'terms', title: 'Terms and conditions', body: 'TEMPLATE FOR REVIEW. This placeholder has not been approved by the business.\n\nA booking is confirmed only when its status shows Confirmed. Submitting a form or enquiry does not by itself confirm a booking.\n\nPrices are calculated by our system at the time of booking and shown with an itemised breakdown before payment. Prices on this demonstration site are samples.' },
+  { slug: 'cancellation-refund', title: 'Cancellation and refund policy', body: 'TEMPLATE FOR REVIEW. The business has not yet supplied its cancellation and refund policy.\n\nUntil it is confirmed: unpaid bookings can be cancelled online; paid bookings can be submitted as a cancellation request, which the team reviews. Refund eligibility will follow the policy the business publishes here.' },
+];

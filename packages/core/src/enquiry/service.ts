@@ -3,7 +3,7 @@ import type { Actor, RequestContext } from '../actor';
 import { can } from '../actor';
 import { recordAudit } from '../audit';
 import { DomainError, invalid, notFound } from '../errors';
-import { generateAccessToken, generateReference, verifyToken } from '../ids';
+import { generateAccessToken, generateReference, REFERENCE_PREFIX, verifyToken } from '../ids';
 import { createEnquirySchema, quotationDraftSchema, convertQuotationSchema } from '../schemas';
 import { getSetting } from '../settings';
 import { addDays, compareLocalDates, formatLocalDate, hhmmToMinutes, parseLocalDate, todayIn, zonedToUtc } from '../time';
@@ -24,7 +24,21 @@ const ENQUIRY_TRANSITIONS: Record<EnquiryStatus, EnquiryStatus[]> = {
   CLOSED: [],
 };
 
-export async function createEnquiry(raw: unknown, actor: Actor | null, ctx: RequestContext = {}, db: PrismaClient = prisma, now = new Date()) {
+export type EnquiryBrand = 'PHOTO' | 'PODCAST' | 'EVENTS';
+
+/**
+ * Create a project or event enquiry for one website's services. Enquiries are
+ * never bookings: they enter the review → quotation → conversion workflow.
+ */
+export async function createEnquiry(
+  raw: unknown,
+  actor: Actor | null,
+  ctx: RequestContext = {},
+  db: PrismaClient = prisma,
+  now = new Date(),
+  brand: EnquiryBrand = 'EVENTS',
+  sourceSite: 'STUDIO' | null = null,
+) {
   const input = createEnquirySchema.parse(raw);
   const regional = await getSetting('regional', db);
   const preferred = parseLocalDate(input.preferredDate);
@@ -38,15 +52,15 @@ export async function createEnquiry(raw: unknown, actor: Actor | null, ctx: Requ
 
   if (input.categoryId) {
     const cat = await db.category.findUnique({ where: { id: input.categoryId } });
-    if (!cat || cat.brand !== 'EVENTS' || !cat.isActive) throw invalid('Unknown event category.');
+    if (!cat || cat.brand !== brand || !cat.isActive) throw invalid('Unknown category.');
   }
   if (input.locationId) {
     const loc = await db.location.findUnique({ where: { id: input.locationId } });
-    if (!loc || !loc.isActive || !loc.brands.includes('EVENTS')) throw invalid('Unknown venue or location.');
+    if (!loc || !loc.isActive || !loc.brands.includes(brand)) throw invalid('Unknown venue or location.');
   }
   const serviceIds = [...new Set(input.serviceIds)];
   if (serviceIds.length) {
-    const count = await db.service.count({ where: { id: { in: serviceIds }, brand: 'EVENTS', isActive: true } });
+    const count = await db.service.count({ where: { id: { in: serviceIds }, brand, isActive: true } });
     if (count !== serviceIds.length) throw invalid('One or more requested services are unavailable.');
   }
 
@@ -57,6 +71,8 @@ export async function createEnquiry(raw: unknown, actor: Actor | null, ctx: Requ
       data: {
         reference: generateReference('EQ'),
         accessTokenHash: access.hash,
+        brand,
+        sourceSite,
         customerId: customer.id,
         categoryId: input.categoryId ?? null,
         eventType: input.eventType,
@@ -69,6 +85,9 @@ export async function createEnquiry(raw: unknown, actor: Actor | null, ctx: Requ
         budgetMaxMinor: input.budgetMaxMinor ?? null,
         setupRequirements: input.setupRequirements || null,
         notes: input.notes || null,
+        companyName: input.companyName || null,
+        expectedDuration: input.expectedDuration || null,
+        deliverables: input.deliverables ?? null,
         contactName: input.contact.name,
         contactEmail: input.contact.email,
         contactPhone: input.contact.phone ?? null,
@@ -322,7 +341,7 @@ export async function convertQuotationToBooking(quotationId: string, raw: unknow
 
       const booking = await tx.booking.create({
         data: {
-          reference: generateReference('EV'),
+          reference: generateReference(REFERENCE_PREFIX[q.enquiry.brand]),
           accessTokenHash: access.hash,
           brand: q.enquiry.brand,
           customerId: q.enquiry.customerId,
@@ -331,6 +350,7 @@ export async function convertQuotationToBooking(quotationId: string, raw: unknow
           resourceId,
           enquiryId: q.enquiryId,
           quotationId: q.id,
+          sourceSite: q.enquiry.sourceSite,
           startsAt: start,
           endsAt: end,
           blockedFrom: start,

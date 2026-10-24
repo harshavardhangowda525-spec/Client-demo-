@@ -19,6 +19,7 @@ enum Brand {
   PHOTO
   PODCAST
   EVENTS
+  STUDIO // the unified studio discovery site: site settings and FAQs only; services stay PHOTO / PODCAST
 }
 
 enum BookingMode {
@@ -284,6 +285,10 @@ model CustomerProfile {
   phone          String?
   company        String?
   marketingOptIn Boolean  @default(false)
+  // Notification preferences. WhatsApp requires explicit, timestamped consent.
+  notifyEmail       Boolean   @default(true)
+  notifyWhatsapp    Boolean   @default(false)
+  whatsappConsentAt DateTime?
   isDemo         Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -291,6 +296,7 @@ model CustomerProfile {
   user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   bookings  Booking[]
   enquiries EventEnquiry[]
+  saved     SavedService[]
 
   @@index([email])
   @@index([fullName])
@@ -339,6 +345,12 @@ model Service {
   slotIntervalMin    Int          @default(30)
   requiresResource   Boolean      @default(true)
   imageKey           String?
+  galleryImageKeys   String[]
+  /// Preparation / requirements shown on the service page.
+  preparation        String?
+  /// Optional per-service deposit (basis points). Null = use the global pricing setting; 10000 = full payment.
+  depositBpsOverride Int?
+  isFeatured         Boolean      @default(false)
   isActive           Boolean      @default(true)
   isDemo             Boolean      @default(true)
   sortOrder          Int          @default(0)
@@ -352,6 +364,10 @@ model Service {
   resources ServiceResource[]
   bookings  Booking[]
   enquiries EnquiryService[]
+  discoveryCategories ServiceDiscoveryCategory[]
+  equipment ServiceEquipment[]
+  savedBy   SavedService[]
+  testimonials Testimonial[]
 
   @@unique([brand, slug])
   @@index([brand, isActive])
@@ -531,6 +547,8 @@ model Booking {
   resourceId      String?
   enquiryId       String?       @unique
   quotationId     String?       @unique
+  /// Website the booking was made on (e.g. STUDIO); links in messages point there. Null = the service's own site.
+  sourceSite      Brand?
   startsAt        DateTime
   endsAt          DateTime
   // Window the resource is blocked for (endsAt + service buffer). Used by the
@@ -578,6 +596,7 @@ model Booking {
   transactions  Transaction[]
   refunds       Refund[]
   notifications Notification[]
+  rescheduleRequests RescheduleRequest[]
 
   @@index([brand, status])
   @@index([customerId])
@@ -641,6 +660,8 @@ model EventEnquiry {
   reference          String        @unique
   accessTokenHash    String?
   brand              Brand         @default(EVENTS)
+  /// Website the enquiry was submitted on. Null = the brand's own site.
+  sourceSite         Brand?
   customerId         String
   categoryId         String?
   eventType          String
@@ -653,6 +674,9 @@ model EventEnquiry {
   budgetMaxMinor     Int?
   setupRequirements  String?
   notes              String?
+  companyName        String?
+  expectedDuration   String?
+  deliverables       Int?
   status             EnquiryStatus @default(SUBMITTED)
   contactName        String
   contactEmail       String
@@ -672,6 +696,7 @@ model EventEnquiry {
   followUps  EnquiryFollowUp[]
   booking    Booking?
   notifications Notification[]
+  attachments EnquiryAttachment[]
 
   @@index([status, createdAt])
   @@index([customerId])
@@ -868,6 +893,10 @@ model PortfolioProject {
   body        String
   coverImage  String
   coverAlt    String
+  /// Optional video (MP4/WebM URL or /media path). Shown with controls, never autoplayed with sound.
+  videoUrl    String?
+  /// Client credit, only when the client has authorised it.
+  clientCredit String?
   isSample    Boolean          @default(true)
   isPublished Boolean          @default(true)
   sortOrder   Int              @default(0)
@@ -959,4 +988,159 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@index([actorUserId])
+}
+
+// ---------------------------------------------------------------------------
+// Studio discovery platform (BookMyShow-style site)
+// ---------------------------------------------------------------------------
+
+enum RescheduleStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+/// Cross-brand browsing categories (Photography, Podcasting, Studio Rental…).
+model DiscoveryCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  imageKey    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  isDemo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services ServiceDiscoveryCategory[]
+}
+
+model ServiceDiscoveryCategory {
+  serviceId  String
+  categoryId String
+  service    Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  category   DiscoveryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, categoryId])
+  @@index([categoryId])
+}
+
+/// Studio equipment and facilities. Unverified entries are labelled as such on the website.
+model Equipment {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  description String?
+  imageKey    String?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services ServiceEquipment[]
+}
+
+model ServiceEquipment {
+  serviceId   String
+  equipmentId String
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, equipmentId])
+}
+
+model HomeBanner {
+  id        String    @id @default(cuid())
+  title     String
+  subtitle  String?
+  imageKey  String
+  imageAlt  String
+  ctaLabel  String
+  ctaHref   String
+  /// Optional verified offer text (never invented).
+  offerText String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+/// Customer testimonials. Only published when genuine and authorised.
+model Testimonial {
+  id           String   @id @default(cuid())
+  quote        String
+  authorName   String
+  authorDetail String?
+  serviceId    String?
+  isAuthorized Boolean  @default(false)
+  isPublished  Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+}
+
+/// Editable policy / information pages (privacy, terms, cancellation-refund).
+model ContentPage {
+  slug       String   @id
+  title      String
+  body       String
+  isTemplate Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+}
+
+model SavedService {
+  customerId String
+  serviceId  String
+  createdAt  DateTime @default(now())
+
+  customer CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  service  Service         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, serviceId])
+}
+
+model RescheduleRequest {
+  id              String           @id @default(cuid())
+  bookingId       String
+  requestedStart  DateTime
+  reason          String?
+  status          RescheduleStatus @default(PENDING)
+  decidedById     String?
+  decisionNote    String?
+  createdAt       DateTime         @default(now())
+  decidedAt       DateTime?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([bookingId])
+}
+
+model EnquiryAttachment {
+  id         String   @id @default(cuid())
+  enquiryId  String
+  fileName   String
+  storedName String   @unique
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  enquiry EventEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+
+  @@index([enquiryId])
+}
+
+/// Admin-editable overrides for notification templates.
+model NotificationTemplate {
+  key       String   @id
+  subject   String
+  body      String
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
 }

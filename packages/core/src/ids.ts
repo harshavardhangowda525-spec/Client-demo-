@@ -28,4 +28,4 @@ export function verifyToken(token: string | undefined | null, hash: string | nul
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export const REFERENCE_PREFIX = { PHOTO: 'PH', PODCAST: 'PC', EVENTS: 'EV' } as const;
+export const REFERENCE_PREFIX = { PHOTO: 'PH', PODCAST: 'PC', EVENTS: 'EV', STUDIO: 'ST' } as const;

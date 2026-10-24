@@ -1,6 +1,7 @@
 import { prisma, type Brand, type BookingStatus, type Db, Prisma } from '@studio/db';
 import { ACTIVE_BOOKING_STATUSES } from '../booking/status';
 import { notificationPreviewsEnabled } from '../env';
+import { addDays, localDayOfWeek, todayIn, zonedToUtc } from '../time';
 
 const PAGE_MAX = 100;
 const page = (p?: number, size?: number) => {
@@ -46,6 +47,33 @@ export async function getDashboard(db: Db = prisma, now = new Date()) {
       db.contactMessage.count({ where: { status: 'NEW' } }),
     ]);
 
+  // Popular services and today's resource occupancy, computed from live records.
+  const ago90 = new Date(now.getTime() - 90 * 86_400_000);
+  const [popularRaw, totalEnquiries, pendingReschedules, resources, todayBookings] = await Promise.all([
+    db.booking.groupBy({ by: ['serviceId'], where: { createdAt: { gte: ago90 }, status: { notIn: ['CANCELLED', 'REJECTED'] } }, _count: { _all: true }, orderBy: { _count: { serviceId: 'desc' } }, take: 5 }),
+    db.eventEnquiry.count(),
+    db.rescheduleRequest.count({ where: { status: 'PENDING' } }),
+    db.resource.findMany({ where: { isActive: true, isExclusive: true }, include: { location: { include: { openingHours: { where: { resourceId: null } } } }, openingHours: true } }),
+    db.booking.findMany({
+      where: { resourceId: { not: null }, status: { in: [...ACTIVE_BOOKING_STATUSES] }, startsAt: { lt: new Date(now.getTime() + 86_400_000) }, endsAt: { gt: new Date(now.getTime() - 86_400_000) } },
+      select: { resourceId: true, startsAt: true, endsAt: true },
+    }),
+  ]);
+  const serviceNames = new Map((await db.service.findMany({ where: { id: { in: popularRaw.map((p) => p.serviceId) } }, select: { id: true, name: true } })).map((s) => [s.id, s.name]));
+  const occupancy = resources.map((r) => {
+    const tz = r.location.timezone;
+    const today = todayIn(tz, now);
+    const dow = localDayOfWeek(today, tz);
+    const hours = (r.openingHours.length ? r.openingHours : r.location.openingHours).filter((h) => h.dayOfWeek === dow);
+    const openMin = hours.reduce((sum, h) => sum + (h.closeMinute - h.openMinute), 0);
+    const start = zonedToUtc(today, 0, tz);
+    const end = zonedToUtc(addDays(today, 1), 0, tz);
+    const bookedMin = todayBookings
+      .filter((b) => b.resourceId === r.id)
+      .reduce((sum, b) => sum + Math.max(0, (Math.min(+b.endsAt, +end) - Math.max(+b.startsAt, +start)) / 60_000), 0);
+    return { resourceId: r.id, resource: r.name, location: r.location.name, openMinutes: openMin, bookedMinutes: Math.round(bookedMin) };
+  });
+
   const money = (simulated: boolean, type: 'CHARGE' | 'REFUND') => {
     const row = charges.find((c) => c.isSimulated === simulated && c.type === type);
     return { amountMinor: row?._sum.amountMinor ?? 0, count: row?._count._all ?? 0 };
@@ -56,6 +84,13 @@ export async function getDashboard(db: Db = prisma, now = new Date()) {
     bookingsByStatus: Object.fromEntries(byStatus.map((r) => [r.status, r._count._all])) as Partial<Record<BookingStatus, number>>,
     activeBookingsByBrand: Object.fromEntries(byBrand.map((r) => [r.brand, r._count._all])) as Partial<Record<Brand, number>>,
     needsReview,
+    totals: {
+      bookings: byStatus.reduce((s, r) => s + r._count._all, 0),
+      enquiries: totalEnquiries,
+      pendingReschedules,
+    },
+    popularServices: popularRaw.map((p) => ({ serviceId: p.serviceId, name: serviceNames.get(p.serviceId) ?? 'Service', bookings: p._count._all })),
+    occupancyToday: occupancy,
     enquiriesByStatus: Object.fromEntries(enquiries.map((r) => [r.status, r._count._all])),
     followUpsDue,
     newContactMessages: contactNew,
