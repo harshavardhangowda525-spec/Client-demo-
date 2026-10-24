@@ -54,11 +54,13 @@ export function BookingStatusView({ site, brandSites, initialRef, initialToken, 
   useEffect(() => {
     if (!initialRef) return;
     let t = initialToken ?? null;
+    // Strip the one-time token and "new" flag so a reload or shared URL carries neither.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    url.searchParams.delete('new');
+    window.history.replaceState(null, '', url.toString());
     if (t) {
       rememberAccessToken(initialRef, t);
-      const url = new URL(window.location.href);
-      url.searchParams.delete('token');
-      window.history.replaceState(null, '', url.toString());
     } else {
       t = recallAccessToken(initialRef);
     }
