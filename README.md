@@ -52,7 +52,7 @@ Until the images are downloaded, every image slot shows a labelled, art-directed
 - [Local setup](docs/SETUP.md)
 - [API documentation](docs/API.md) and the generated [OpenAPI document](docs/openapi.json)
 - [Testing](docs/TESTING.md)
-- [Deployment](docs/DEPLOYMENT.md)
+- [Deployment](docs/DEPLOYMENT.md) · [One-click demo on Render](docs/DEPLOY_RENDER.md)
 - [Security notes](docs/SECURITY.md)
 - [Integration status](docs/INTEGRATIONS.md)
 - [Project status, known limitations and test record](docs/PROJECT_STATUS.md)

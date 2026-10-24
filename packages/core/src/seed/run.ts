@@ -259,8 +259,18 @@ async function seedActivity(ids: { today: LocalDate; serviceIds: Record<string, 
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop()!);
 if (isMain) {
-  seedDemo({ force: process.argv.includes('--force') })
+  const ifEmpty = process.argv.includes('--if-empty');
+  (ifEmpty
+    ? prisma.user.count().then((n) => {
+        if (n > 0) {
+          console.info('Database already has data: skipping demo seed (--if-empty).');
+          return { users: [] as { email: string; role: string; password: string }[] };
+        }
+        return seedDemo({ force: process.argv.includes('--force') });
+      })
+    : seedDemo({ force: process.argv.includes('--force') }))
     .then((r) => {
+      if (!r.users.length) return;
       console.info('Demo data seeded. Demo accounts (demonstration only):');
       for (const u of r.users) console.info(`  ${u.role.padEnd(9)} ${u.email}  ${u.password}`);
     })
