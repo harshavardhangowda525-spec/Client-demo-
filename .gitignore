@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+*.log
+.env
+.env.local
+.env.*.local
+!.env.example
+test-results/
+playwright-report/
+.DS_Store
+next-env.d.ts
+*.tsbuildinfo
