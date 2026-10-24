@@ -6,6 +6,9 @@ import { AuthPanel } from '@studio/ui';
 import { getMe } from '@studio/ui/server';
 import { AdminShell } from '../components/AdminShell';
 
+// Every page shows live data (availability, prices, bookings), so nothing is prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Studio Admin' }, robots: { index: false, follow: false } };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

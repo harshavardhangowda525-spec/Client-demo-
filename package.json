@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev --concurrency 20",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "eslint .",
@@ -19,18 +19,19 @@
     "db:seed": "pnpm --filter @studio/db seed",
     "db:reset": "pnpm --filter @studio/db reset",
     "images:fetch": "node scripts/fetch-demo-images.mjs",
-    "start": "turbo run start --parallel"
+    "start": "turbo run start --concurrency 20"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "1.63.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
     "prettier": "^3.6.2",
+    "sharp": "^0.34.4",
     "turbo": "^2.11.10",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0",
-    "sharp": "^0.34.4"
+    "typescript-eslint": "^8.46.0"
   }
 }

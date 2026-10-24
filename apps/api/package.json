@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsx watch src/server.ts",
-    "build": "tsup src/server.ts --format esm --target node22 --platform node --sourcemap --clean --no-splitting --external @prisma/client --external .prisma --noExternal @studio/core --noExternal @studio/db",
+    "build": "tsup",
     "start": "dotenv -e ../../.env -- node dist/server.js",
     "openapi": "dotenv -e ../../.env -- tsx src/openapi-cli.ts",
     "test": "dotenv -e ../../.env -- vitest run",
@@ -16,6 +16,7 @@
     "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/static": "^10.1.7",
+    "@prisma/client": "6.19.3",
     "@studio/core": "workspace:*",
     "@studio/db": "workspace:*",
     "better-auth": "1.7.12",

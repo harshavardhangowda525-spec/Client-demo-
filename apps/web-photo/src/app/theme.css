@@ -90,3 +90,4 @@ h1 em, h2 em { font-style: italic; color: var(--accent-text); }
 .process > div { counter-increment: p; border-top: 1px solid currentColor; padding-top: var(--space-4); }
 .process > div::before { content: '0' counter(p); font-family: var(--font-display); font-size: var(--step-2); color: var(--brass); display: block; margin-bottom: var(--space-2); }
 .rule-quote { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; max-width: 22ch; }
+.package-card--featured .eyebrow { color: var(--brass); }

@@ -143,7 +143,7 @@ export function BookingFlow({ brand, site, services, locations, me, initial = {}
     for (const d of availability?.days ?? []) out[d.date] = { date: d.date, isOpen: d.isOpen, slotCount: d.slots.length };
     return out;
   }, [availability]);
-  const daySlots = availability?.days.find((d) => d.date === date)?.slots ?? [];
+  const daySlots = useMemo(() => availability?.days.find((d) => d.date === date)?.slots ?? [], [availability, date]);
 
   // If the chosen slot disappears after a refresh, clear it.
   useEffect(() => {

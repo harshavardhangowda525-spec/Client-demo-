@@ -6,6 +6,9 @@ import './theme.css';
 import { DemoBar, SiteFooter, SiteHeader } from '@studio/ui';
 import { shell } from '../site';
 
+// Every page shows live data (availability, prices, bookings), so nothing is prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: { default: 'Lumen Studio · Photography & Film (demo)', template: '%s · Lumen Studio (demo)' },
   description: 'Demonstration website for a photography and videography studio. Sample services, prices and AI-generated imagery.',

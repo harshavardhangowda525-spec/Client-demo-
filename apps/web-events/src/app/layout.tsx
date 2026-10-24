@@ -7,6 +7,9 @@ import './theme.css';
 import { DemoBar, SiteFooter, SiteHeader } from '@studio/ui';
 import { shell } from '../site';
 
+// Every page shows live data (availability, prices, bookings), so nothing is prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: { default: 'Atelier Events · Event management (demo)', template: '%s · Atelier Events (demo)' },
   description: 'Demonstration website for an event management company: services, enquiries, quotations and bookings. Sample content.',

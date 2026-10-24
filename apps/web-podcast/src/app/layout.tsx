@@ -7,6 +7,9 @@ import './theme.css';
 import { DemoBar, SiteFooter, SiteHeader } from '@studio/ui';
 import { shell } from '../site';
 
+// Every page shows live data (availability, prices, bookings), so nothing is prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: { default: 'Signal Room · Podcast studios (demo)', template: '%s · Signal Room (demo)' },
   description: 'Demonstration website for a podcast studio: studio discovery, live availability and session booking. Sample content.',

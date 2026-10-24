@@ -29,7 +29,7 @@ export function SiteHeader({ brandMark, nav, cta, accountHref = '/account' }: { 
   return (
     <header className="site-header">
       <div className="container site-header__inner">
-        <Link href="/" className="brand-mark" aria-label="Home">
+        <Link href="/" className="brand-mark">
           {brandMark}
         </Link>
         <nav className="site-nav" aria-label="Main">
