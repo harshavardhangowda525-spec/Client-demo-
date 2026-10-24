@@ -1,0 +1,33 @@
+{
+  "name": "@studio/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- tsx watch src/server.ts",
+    "build": "tsup src/server.ts --format esm --target node22 --platform node --sourcemap --clean --no-splitting --external @prisma/client --external .prisma --noExternal @studio/core --noExternal @studio/db",
+    "start": "dotenv -e ../../.env -- node dist/server.js",
+    "openapi": "dotenv -e ../../.env -- tsx src/openapi-cli.ts",
+    "test": "dotenv -e ../../.env -- vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.1",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.7",
+    "@studio/core": "workspace:*",
+    "@studio/db": "workspace:*",
+    "better-auth": "1.7.12",
+    "fastify": "^5.12.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "dotenv-cli": "^10.0.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}
