@@ -17,6 +17,7 @@ import {
   saveEnquiryAttachment,
   searchStudio,
   setSavedService,
+  studioCities,
   studioListingQuerySchema,
   updateNotificationPreferences,
   getOwnProfile,
@@ -47,6 +48,11 @@ export function registerStudioRoutes(app: FastifyInstance) {
   defineRoute(app, {
     method: 'GET', url: '/api/v1/studio/categories', summary: 'Browsing categories', tags: ['Studio'], access: 'public',
     handler: () => getStudioCategories(),
+  });
+
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/studio/cities', summary: 'Cities with an active studio location (for the location selector)', tags: ['Studio'], access: 'public',
+    handler: () => studioCities(),
   });
 
   defineRoute(app, {

@@ -1,17 +1,17 @@
 import type { PublicService } from '@studio/core';
 
-export type Brand = 'PHOTO' | 'PODCAST' | 'EVENTS';
+export type Brand = 'PHOTO' | 'PODCAST' | 'EVENTS' | 'STUDIO';
 export type { PublicService };
 
 export interface SiteConfig {
   brand: Brand;
-  site: { name: string; tagline: string; email: string; phone?: string };
+  site: { name: string; tagline: string; email: string; phone?: string; social?: Record<string, string | undefined> };
   business: { name: string; isDemo: boolean };
   regional: { timezone: string; currency: string; locale: string };
   bookingRules: { leadTimeHours: number; maxAdvanceDays: number; holdMinutes: number; allowGuestBookings: boolean; isDemoAvailability: boolean };
   pricing: { taxLabel: string; taxRateBps: number; depositBps: number; isSample: boolean };
   cancellationPolicy: { text: string; isSample: boolean };
-  integrations: { paymentsMode: 'demo' | 'live' | 'disabled'; paymentsSimulated: boolean; mapsEmbedKey: string | null; emailDelivery: boolean };
+  integrations: { paymentsMode: 'demo' | 'live' | 'disabled'; paymentsSimulated: boolean; mapsEmbedKey: string | null; emailDelivery: boolean; whatsappDelivery?: boolean };
 }
 
 export interface Category {
@@ -128,7 +128,9 @@ export interface BookingDto {
   isDemo: boolean;
   history: { status: string; label: string; at: string; reason: string | null }[];
   payments: { type: string; status: string; amountMinor: number; isSimulated: boolean; at: string }[];
-  actions: { canPayDeposit: boolean; canPayBalance: boolean; canCancel: boolean; canRequestCancellation: boolean };
+  actions: { canPayDeposit: boolean; canPayBalance: boolean; canCancel: boolean; canRequestCancellation: boolean; canRequestReschedule?: boolean };
+  sourceSite?: Brand | null;
+  rescheduleRequests?: { id: string; status: string; requestedStart: string; reason: string | null; decisionNote: string | null; createdAt: string }[];
   createdAt: string;
 }
 

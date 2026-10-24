@@ -4,6 +4,7 @@ export const SITES = {
   photo: process.env.SITE_URL_PHOTO ?? 'http://localhost:3001',
   podcast: process.env.SITE_URL_PODCAST ?? 'http://localhost:3002',
   events: process.env.SITE_URL_EVENTS ?? 'http://localhost:3003',
+  studio: process.env.SITE_URL_STUDIO ?? 'http://localhost:3004',
   admin: process.env.SITE_URL_ADMIN ?? 'http://localhost:3100',
 };
 

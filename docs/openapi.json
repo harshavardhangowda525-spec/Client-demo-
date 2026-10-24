@@ -3607,6 +3607,24 @@
         }
       }
     },
+    "/api/v1/studio/cities": {
+      "get": {
+        "summary": "Cities with an active studio location (for the location selector)",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
     "/api/v1/studio/services": {
       "get": {
         "summary": "Service listing with filters (category, text, price, duration, city, equipment, type, available date), sorting and pagination",

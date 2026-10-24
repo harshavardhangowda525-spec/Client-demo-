@@ -14,4 +14,4 @@ export { ContactForm } from './components/ContactForm';
 export { AuthPanel, AccountDashboard, ResetPasswordForm } from './components/AccountView';
 export { AvailabilityExplorer } from './components/AvailabilityExplorer';
 export { FaqList, LocationCard, LegalContent } from './components/Content';
-export { api, fieldErrors, newIdempotencyKey, type ApiErrorBody, type ApiResult } from './lib/api';
+export { api, fieldErrors, newIdempotencyKey, recallAccessToken, rememberAccessToken, type ApiErrorBody, type ApiResult } from './lib/api';

@@ -17,6 +17,7 @@ export function brandSites(): Record<Brand, string> {
     PHOTO: process.env.SITE_URL_PHOTO ?? 'http://localhost:3001',
     PODCAST: process.env.SITE_URL_PODCAST ?? 'http://localhost:3002',
     EVENTS: process.env.SITE_URL_EVENTS ?? 'http://localhost:3003',
+    STUDIO: process.env.SITE_URL_STUDIO ?? 'http://localhost:3004',
   };
 }
 export const adminUrl = () => process.env.SITE_URL_ADMIN ?? 'http://localhost:3100';
@@ -61,14 +62,14 @@ export async function BookPage({ brand, searchParams, title, lead, labels, showA
   );
 }
 
-export async function BookingStatusPage({ brand, searchParams }: { brand: Brand; searchParams: SearchParams }) {
+export async function BookingStatusPage({ brand, searchParams, homeBrands, showReceipt }: { brand: Brand; searchParams: SearchParams; homeBrands?: Brand[]; showReceipt?: boolean }) {
   const [sp, site, me] = await Promise.all([searchParams, getSiteConfig(brand), getMe()]);
   return (
     <>
       <PageHeader eyebrow="Booking status" title="Your booking" lead="Check the status of a booking, pay a deposit or balance, and see its history." />
       <section className="section">
         <div className="container">
-          <BookingStatusView site={site} brandSites={brandSites()} initialRef={one(sp.ref)} initialToken={one(sp.token)} isNew={one(sp.new) === '1'} signedIn={!!me} />
+          <BookingStatusView site={site} brandSites={brandSites()} initialRef={one(sp.ref)} initialToken={one(sp.token)} isNew={one(sp.new) === '1'} signedIn={!!me} homeBrands={homeBrands} showReceipt={showReceipt} />
         </div>
       </section>
     </>
@@ -89,7 +90,7 @@ export async function EnquiryStatusPage({ searchParams }: { searchParams: Search
   );
 }
 
-export async function AccountPage({ brand, searchParams }: { brand: Brand; searchParams: SearchParams }) {
+export async function AccountPage({ brand, searchParams, homeBrands, children }: { brand: Brand; searchParams: SearchParams; homeBrands?: Brand[]; children?: React.ReactNode }) {
   const [sp, site, me] = await Promise.all([searchParams, getSiteConfig(brand), getMe()]);
   if (!me) {
     return (
@@ -113,7 +114,8 @@ export async function AccountPage({ brand, searchParams }: { brand: Brand; searc
       <PageHeader eyebrow="Account" title={`Hello, ${me.profile.fullName.split(' ')[0]}`} lead="Your bookings, enquiries and payments across all three websites." />
       <section className="section">
         <div className="container">
-          <AccountDashboard me={me} bookings={bookings ?? []} enquiries={enquiries ?? []} payments={payments ?? []} brand={brand} brandSites={brandSites()} adminUrl={adminUrl()} />
+          <AccountDashboard me={me} bookings={bookings ?? []} enquiries={enquiries ?? []} payments={payments ?? []} brand={brand} brandSites={brandSites()} adminUrl={adminUrl()} homeBrands={homeBrands} />
+          {children}
         </div>
       </section>
     </>

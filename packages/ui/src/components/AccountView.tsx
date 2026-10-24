@@ -100,7 +100,8 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
   );
 }
 
-export function AccountDashboard({ me, bookings, enquiries, payments, brand, brandSites, adminUrl }: {
+export function AccountDashboard({ me, bookings, enquiries, payments, brand, brandSites, adminUrl, homeBrands }: {
+  homeBrands?: Brand[];
   me: Me;
   bookings: AccountBooking[];
   enquiries: AccountEnquiry[];
@@ -134,7 +135,11 @@ export function AccountDashboard({ me, bookings, enquiries, payments, brand, bra
     router.refresh();
   }
 
-  const linkFor = (b: AccountBooking) => (b.brand === brand ? `/booking-status?ref=${b.reference}` : `${brandSites[b.brand]}/booking-status?ref=${b.reference}`);
+  const local = homeBrands ?? [brand];
+  const linkFor = (b: AccountBooking) => (local.includes(b.brand) ? `/booking-status?ref=${b.reference}` : `${brandSites[b.brand]}/booking-status?ref=${b.reference}`);
+  const nowIso = new Date().toISOString();
+  const upcoming = bookings.filter((b) => b.startsAt >= nowIso && !['CANCELLED', 'REJECTED', 'COMPLETED'].includes(b.status)).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const past = bookings.filter((b) => !upcoming.includes(b));
 
   return (
     <div className="stack-lg">
@@ -146,29 +151,34 @@ export function AccountDashboard({ me, bookings, enquiries, payments, brand, bra
         </div>
       </div>
 
-      <section aria-labelledby="b-h">
-        <h2 id="b-h" style={{ fontSize: 'var(--step-2)' }}>Your bookings</h2>
-        {bookings.length === 0 ? (
-          <div className="empty">No bookings yet. <a href="/book">Make a booking</a>.</div>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Reference</th><th>Service</th><th>When</th><th>Status</th><th>Total</th></tr></thead>
-              <tbody>
-                {bookings.map((b) => (
-                  <tr key={b.reference}>
-                    <td><a href={linkFor(b)} className="mono">{b.reference}</a>{b.isDemo && <> <span className="badge badge--demo">Demo</span></>}</td>
-                    <td>{b.service}<div className="small muted">{b.location}</div></td>
-                    <td>{formatDateTime(b.startsAt, b.timezone)}</td>
-                    <td><StatusBadge status={b.status} label={b.statusLabel} /><div className="small muted">{b.paymentStatusLabel}</div></td>
-                    <td className="price">{formatMoney(b.totalMinor, b.currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {[
+        { id: 'up-h', title: 'Upcoming bookings', rows: upcoming, empty: <>No upcoming bookings. <a href="/book">Make a booking</a>.</> },
+        { id: 'past-h', title: 'Past and cancelled bookings', rows: past, empty: <>Nothing here yet.</> },
+      ].map((group) => (
+        <section key={group.id} aria-labelledby={group.id}>
+          <h2 id={group.id} style={{ fontSize: 'var(--step-2)' }}>{group.title}</h2>
+          {group.rows.length === 0 ? (
+            <div className="empty">{group.empty}</div>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead><tr><th>Reference</th><th>Service</th><th>When</th><th>Status</th><th>Total</th></tr></thead>
+                <tbody>
+                  {group.rows.map((b) => (
+                    <tr key={b.reference}>
+                      <td><a href={linkFor(b)} className="mono">{b.reference}</a>{b.isDemo && <> <span className="badge badge--demo">Demo</span></>}</td>
+                      <td>{b.service}<div className="small muted">{b.location}</div></td>
+                      <td>{formatDateTime(b.startsAt, b.timezone)}</td>
+                      <td><StatusBadge status={b.status} label={b.statusLabel} /><div className="small muted">{b.paymentStatusLabel}</div></td>
+                      <td className="price">{formatMoney(b.totalMinor, b.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
 
       {enquiries.length > 0 && (
         <section aria-labelledby="e-h">
