@@ -55,6 +55,8 @@ export const createBookingSchema = z.object({
   contact: contactSchema,
   notes: trimmed(2000).optional(),
   acceptTerms: z.literal(true, { message: 'Please accept the booking terms' }),
+  /** Website the booking is made on, when it differs from the service's own site. */
+  sourceSite: z.enum(['STUDIO']).optional(),
 });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 

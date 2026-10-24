@@ -204,7 +204,7 @@ export async function createBooking(
           reference,
           accessTokenHash: access.hash,
           brand: input.brand,
-          sourceSite: opts.sourceSite ?? null,
+          sourceSite: input.sourceSite ?? opts.sourceSite ?? null,
           customerId: customer.id,
           serviceId: quote.service.id,
           packageId: quote.pkg?.id ?? null,
@@ -280,6 +280,7 @@ export async function getBookingForViewer(reference: string, viewer: Viewer, db:
       paymentOrders: { orderBy: { createdAt: 'desc' } },
       transactions: { orderBy: { createdAt: 'desc' } },
       customer: true,
+      rescheduleRequests: { orderBy: { createdAt: 'desc' }, take: 5 },
     },
   });
   if (!booking) throw notFound('Booking');

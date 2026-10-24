@@ -50,7 +50,13 @@ export function customerBookingDto(b: BookingWithRelations) {
     isDemo: b.isDemo,
     history: b.history.map((h) => ({ status: h.toStatus, label: STATUS_LABELS[h.toStatus as BookingStatusValue], at: h.createdAt.toISOString(), reason: h.actorType === 'STAFF' && h.fromStatus === h.toStatus ? 'Updated by the team' : h.reason })),
     payments: b.transactions.map((t) => ({ type: t.type, status: t.status, amountMinor: t.amountMinor, isSimulated: t.isSimulated, at: t.createdAt.toISOString() })),
-    actions: customerActions(b),
+    actions: {
+      ...customerActions(b),
+      canRequestReschedule:
+        ['ENQUIRY_SUBMITTED', 'AWAITING_REVIEW', 'AWAITING_PAYMENT', 'PAYMENT_PENDING', 'CONFIRMED'].includes(status) && !b.rescheduleRequests.some((r) => r.status === 'PENDING'),
+    },
+    sourceSite: b.sourceSite,
+    rescheduleRequests: b.rescheduleRequests.map((r) => ({ id: r.id, status: r.status, requestedStart: r.requestedStart.toISOString(), reason: r.reason, decisionNote: r.decisionNote, createdAt: r.createdAt.toISOString() })),
     createdAt: b.createdAt.toISOString(),
   };
 }
