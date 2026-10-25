@@ -12,6 +12,8 @@ const schema = z.object({
   CORS_ORIGINS: z.string().optional(),
   /** Fastify trustProxy setting. "loopback" trusts the local Next.js proxies. */
   TRUST_PROXY: z.string().default('loopback'),
+  /** Requests per minute per client IP across the API (auth and booking routes have stricter limits). */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(100_000).default(300),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   MEDIA_DIR: z.string().optional(),
 });

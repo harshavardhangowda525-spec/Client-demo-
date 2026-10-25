@@ -288,12 +288,20 @@ const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].repla
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
   (ifEmpty
-    ? prisma.user.count().then((n) => {
-        if (n > 0) {
+    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.booking.count({ where: { isDemo: false } })]).then(([users, studio, real]) => {
+        const skip = { users: [] as { email: string; role: string; password: string }[] };
+        if (users === 0) return seedDemo({ force: process.argv.includes('--force') });
+        if (studio > 0) {
           console.info('Database already has data: skipping demo seed (--if-empty).');
-          return { users: [] as { email: string; role: string; password: string }[] };
+          return skip;
         }
-        return seedDemo({ force: process.argv.includes('--force') });
+        // A demo database created before the studio platform existed: reload the full demo data set.
+        if (real > 0) {
+          console.warn('Studio content is missing, but the database holds non-demo bookings, so it was not reseeded. Add studio content in the admin panel (Studio site).');
+          return skip;
+        }
+        console.info('Demo database predates the studio platform: reloading demo data (--if-empty).');
+        return seedDemo();
       })
     : seedDemo({ force: process.argv.includes('--force') }))
     .then((r) => {

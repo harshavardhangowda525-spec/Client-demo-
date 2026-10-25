@@ -60,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
   await app.register(rateLimit, {
     global: true,
-    max: cfg.NODE_ENV === 'test' ? 10_000 : 300,
+    max: cfg.NODE_ENV === 'test' ? 10_000 : cfg.RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
     errorResponseBuilder: (_req, ctx) => ({ statusCode: 429, error: { code: 'RATE_LIMITED', message: `Too many requests. Please try again in ${Math.ceil(ctx.ttl / 1000)} seconds.` } }),
   });

@@ -1,6 +1,6 @@
 # API documentation
 
-The shared API serves the three websites, the admin panel and, later, the mobile app.
+The shared API serves the four websites, the admin panel and, later, the mobile app.
 
 - **Base URL (local):** `http://localhost:4000`. The websites reach it through their own `/api/*` proxy.
 - **Machine-readable spec:** [`openapi.json`](openapi.json), regenerated with `pnpm --filter @studio/api openapi`, or live at `GET /api/openapi.json`. It is generated from the same zod schemas that validate requests, so it cannot drift from the implementation.
@@ -30,7 +30,7 @@ Creating a booking or enquiry returns a one-time `accessToken`. Only its SHA-256
 ## Endpoint overview
 
 ### Public catalogue and content
-`GET /api/v1/sites/{brand}` (site configuration and integration flags) · `/catalog` · `/services/{slug}` · `/locations` · `/portfolio[?category=]` · `/portfolio/{slug}` · `/faqs`. Here `brand` is one of `PHOTO`, `PODCAST`, `EVENTS`.
+`GET /api/v1/sites/{brand}` (site configuration and integration flags) · `/catalog` · `/services/{slug}` · `/locations` · `/portfolio[?category=]` · `/portfolio/{slug}` · `/faqs`. Here `brand` is one of `PHOTO`, `PODCAST`, `EVENTS` (and `STUDIO` for the site configuration and FAQs of the Infinity Studios platform).
 
 ### Booking engine
 | Method | Path | Notes |
@@ -53,13 +53,25 @@ Creating a booking or enquiry returns a one-time `accessToken`. Only its SHA-256
 ### Enquiries
 `POST /api/v1/enquiries` · `GET /api/v1/enquiries/{reference}` · `POST /api/v1/enquiries/{reference}/quotations/{id}/respond` `{decision: ACCEPT|DECLINE}`
 
+### Infinity Studios platform (public)
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/v1/studio/home[?city=]` | Banners, categories, popular services (by bookings in the last 90 days) with the **real** next free slot, featured services, packages, equipment, portfolio, authorised testimonials, FAQs |
+| GET | `/api/v1/studio/search?q=` | Services, packages, categories and equipment; multi-word queries match all words |
+| GET | `/api/v1/studio/categories` · `/studio/cities` | Browse categories; cities with an active studio location |
+| GET | `/api/v1/studio/services?category&q&city&minPrice&maxPrice&maxDuration&equipment&type&date&sort&page&pageSize` | Listing with filters (`date` = has a free slot that day), sorting and pagination, plus facets |
+| GET | `/api/v1/studio/services/{slug}` · `/studio/portfolio[?category=]` · `/studio/pages/{slug}` | Service detail; portfolio with videos; policy pages |
+| POST | `/api/v1/studio/enquiries` | Project brief for a custom quotation (never a booking). Services from both brands in one brief are rejected. Returns `{reference, accessToken}`. |
+| POST | `/api/v1/enquiries/{reference}/attachments` | Multipart field `file`, with `X-Booking-Token`. PDF/JPG/PNG/WebP, detected from the content; max 10 MB each, 5 per enquiry. |
+| POST | `/api/v1/bookings/{reference}/reschedule-requests` `{date, startTime, reason?}` | Asks to move a booking. The original slot stays reserved until staff approve; requests close 48 hours before the session (configurable). |
+
 ### Account (signed in)
-`GET /api/v1/me` · `PATCH /api/v1/me/profile` · `GET /api/v1/me/bookings` · `/me/enquiries` · `/me/payments`
+`GET /api/v1/me` · `PATCH /api/v1/me/profile` · `GET /api/v1/me/bookings` · `/me/enquiries` · `/me/payments` · `GET /me/saved`, `PUT|DELETE /me/saved/{serviceId}` · `GET|PATCH /me/preferences` (email/WhatsApp; WhatsApp requires explicit consent)
 
 ### Admin (`/api/v1/admin/*`, permission-checked on the server)
-Dashboard · bookings (search, detail, `transition`, `reschedule`, `notes`) · catalogue (services, packages, add-ons, categories) · locations, resources, `opening-hours`, `blocked-periods` · customers · enquiries (update, follow-ups, quotations: save draft / send / respond / convert) · payments and `transactions/{id}/refund` · settings · integrations (`verify`) · audit · notifications · portfolio, FAQs, contact messages · staff and users.
+Dashboard · bookings (search, detail, `transition`, `reschedule`, `notes`) · catalogue (services, packages, add-ons, categories) · locations, resources, `opening-hours`, `blocked-periods` · customers · enquiries (update, follow-ups, quotations: save draft / send / respond / convert) · payments and `transactions/{id}/refund` · settings · integrations (`verify`) · audit · notifications · portfolio, FAQs, contact messages · staff and users · **studio site:** `banners`, `discovery-categories`, `equipment`, `testimonials` (publishing requires recorded authorisation), `pages/{slug}`, notification `templates/{key}` (unknown placeholders rejected), `reschedule-requests` (+ `/{id}/decide`), `reminders/run`, `attachments/{id}` (staff-only download, never rendered inline).
 The OpenAPI document lists the permission each endpoint requires.
 
 ## Rate limits
 
-300 requests per minute per IP globally. Stricter limits apply to booking creation (20 per 10 min), lookup (10 per 15 min), enquiries (10 per 10 min), contact (5 per 10 min) and sign-in (8 per min).
+300 requests per minute per visitor IP globally (`RATE_LIMIT_PER_MINUTE`). The websites forward the visitor's IP on their server-side API calls, so the limit applies per visitor rather than per web server. Stricter limits apply to booking creation (20 per 10 min), lookup (10 per 15 min), enquiries (10 per 10 min), contact (5 per 10 min) and sign-in (8 per min).
