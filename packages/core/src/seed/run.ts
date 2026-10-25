@@ -284,6 +284,89 @@ async function seedActivity(ids: { today: LocalDate; serviceIds: Record<string, 
   await prisma.customerProfile.updateMany({ data: { isDemo: true } });
 }
 
+/**
+ * Adds the studio platform's demo content to a database created before it
+ * existed. Purely additive: existing services, bookings, customers and content
+ * are never changed or removed, so it is safe on a database with real bookings.
+ */
+export async function topUpStudioContent() {
+  const added = { services: 0, categories: 0, equipment: 0, banners: 0, pages: 0, faqs: 0 };
+  const serviceIds: Record<string, string> = {};
+  for (const s of data.services) {
+    const existing = await prisma.service.findUnique({ where: { brand_slug: { brand: s.brand, slug: s.slug } } });
+    if (existing) {
+      serviceIds[s.key] = existing.id;
+      continue;
+    }
+    // Link only to records that exist; a missing location or resource is skipped rather than invented.
+    const locs = await prisma.location.findMany({ where: { slug: { in: data.locations.filter((l) => s.locations.includes(l.key)).map((l) => l.slug) } } });
+    const resourceDefs = data.resources.filter((r) => s.resources.includes(r.key));
+    const resources = (
+      await Promise.all(resourceDefs.map((r) => {
+        const loc = locs.find((l) => l.slug === data.locations.find((d) => d.key === r.location)?.slug);
+        return loc ? prisma.resource.findFirst({ where: { locationId: loc.id, name: r.name } }) : null;
+      }))
+    ).filter((r): r is NonNullable<typeof r> => !!r);
+    const addOns = await prisma.addOn.findMany({ where: { brand: s.brand, slug: { in: s.addOns } } });
+    const category = await prisma.category.findFirst({ where: { brand: s.brand, slug: s.category } });
+    if (!locs.length) continue;
+    const row = await prisma.service.create({
+      data: {
+        brand: s.brand, categoryId: category?.id ?? null, slug: s.slug, name: s.name, summary: s.summary, description: s.description,
+        bookingMode: s.bookingMode, pricingModel: s.pricingModel, basePriceMinor: s.basePriceMinor ?? 0, hourlyRateMinor: s.hourlyRateMinor ?? 0,
+        minDurationMin: s.minDurationMin, maxDurationMin: s.maxDurationMin, durationStepMin: s.durationStepMin, defaultDurationMin: s.defaultDurationMin,
+        bufferMin: s.bufferMin, requiresResource: s.requiresResource, imageKey: s.imageKey, sortOrder: 100 + added.services, isDemo: true,
+        isFeatured: data.featuredServices.includes(s.key), preparation: data.servicePreparation[s.key] ?? null, galleryImageKeys: data.serviceGallery[s.key] ?? [],
+        locations: { create: locs.map((l) => ({ locationId: l.id })) },
+        resources: { create: resources.map((r) => ({ resourceId: r.id })) },
+        addOns: { create: addOns.map((a) => ({ addOnId: a.id })) },
+        packages: { create: (s.packages ?? []).map((p, j) => ({ ...p, sortOrder: j, isDemo: true })) },
+      },
+    });
+    serviceIds[s.key] = row.id;
+    added.services += 1;
+  }
+
+  const discoveryIds: Record<string, string> = {};
+  for (const [i, c] of data.discoveryCategories.entries()) {
+    const existing = await prisma.discoveryCategory.findUnique({ where: { slug: c.slug } });
+    discoveryIds[c.slug] = existing?.id ?? (await prisma.discoveryCategory.create({ data: { ...c, sortOrder: i, isDemo: true } })).id;
+    if (!existing) added.categories += 1;
+  }
+  for (const [key, slugs] of Object.entries(data.serviceDiscovery)) {
+    if (!serviceIds[key]) continue;
+    await prisma.serviceDiscoveryCategory.createMany({ data: slugs.map((slug) => ({ serviceId: serviceIds[key]!, categoryId: discoveryIds[slug]! })), skipDuplicates: true });
+  }
+  if ((await prisma.equipment.count()) === 0) {
+    for (const [i, e] of data.equipment.entries()) {
+      const row = await prisma.equipment.create({
+        data: { name: e.name, category: e.category, imageKey: e.imageKey, description: 'Sample facility. Details and specifications to be confirmed by the studio.', isVerified: false, sortOrder: i },
+      });
+      const links = e.services.filter((k) => serviceIds[k]).map((k) => ({ serviceId: serviceIds[k]!, equipmentId: row.id }));
+      if (links.length) await prisma.serviceEquipment.createMany({ data: links, skipDuplicates: true });
+      added.equipment += 1;
+    }
+  }
+  if ((await prisma.homeBanner.count()) === 0) {
+    const catalogImages = imageCatalog.images as Record<string, { alt: string }>;
+    for (const [i, b] of data.banners.entries()) {
+      await prisma.homeBanner.create({ data: { ...b, imageAlt: catalogImages[b.imageKey]?.alt ?? b.title, sortOrder: i } });
+      added.banners += 1;
+    }
+  }
+  for (const p of data.contentPages) {
+    if (await prisma.contentPage.findUnique({ where: { slug: p.slug } })) continue;
+    await prisma.contentPage.create({ data: { ...p, isTemplate: true } });
+    added.pages += 1;
+  }
+  if ((await prisma.faq.count({ where: { brand: 'STUDIO' } })) === 0) {
+    const list = data.faqs.STUDIO ?? [];
+    await prisma.faq.createMany({ data: list.map((f, i) => ({ brand: 'STUDIO' as const, question: f.q, answer: f.a, sortOrder: i, isDemo: true })) });
+    added.faqs = list.length;
+  }
+  return added;
+}
+
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop()!);
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
@@ -295,13 +378,11 @@ if (isMain) {
           console.info('Database already has data: skipping demo seed (--if-empty).');
           return skip;
         }
-        // A demo database created before the studio platform existed: reload the full demo data set.
-        if (real > 0) {
-          console.warn('Studio content is missing, but the database holds non-demo bookings, so it was not reseeded. Add studio content in the admin panel (Studio site).');
+        // A database created before the studio platform existed: add its content without touching existing data.
+        return topUpStudioContent().then((added) => {
+          console.info(`Added studio platform content (existing data kept): ${JSON.stringify(added)}`);
           return skip;
-        }
-        console.info('Demo database predates the studio platform: reloading demo data (--if-empty).');
-        return seedDemo();
+        });
       })
     : seedDemo({ force: process.argv.includes('--force') }))
     .then((r) => {

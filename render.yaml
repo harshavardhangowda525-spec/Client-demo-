@@ -59,8 +59,17 @@ services:
         value: 0.0.0.0
       - key: TRUST_PROXY
         value: "true"
+      # Razorpay checkout. Use rzp_test_ keys for the demo (test mode: no real money).
+      # The keys are never stored in this file: Render asks for them, and a
+      # Blueprint sync never overwrites them. Without keys, online payment is
+      # switched off and customers are told the team will arrange payment.
+      # Set PAYMENTS_MODE to "demo" for the simulated checkout instead.
       - key: PAYMENTS_MODE
-        value: demo
+        value: live
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
       - key: NOTIFICATION_PREVIEWS
         value: "true"
       - key: ALLOW_DEMO_SEED
