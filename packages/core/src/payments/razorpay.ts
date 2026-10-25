@@ -9,6 +9,11 @@ export function razorpayConfigured(): boolean {
   return !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
 }
 
+/** Test-mode keys (rzp_test_…) never move real money; their payments are excluded from revenue. */
+export function razorpayTestMode(): boolean {
+  return getEnv().RAZORPAY_KEY_ID?.startsWith('rzp_test_') ?? false;
+}
+
 function authHeader(): string {
   const env = getEnv();
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
@@ -18,11 +23,16 @@ function authHeader(): string {
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: { Authorization: authHeader(), 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    signal: AbortSignal.timeout(15_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...init,
+      headers: { Authorization: authHeader(), 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    throw new DomainError('PAYMENT_ERROR', 'We could not reach the payment provider. Please try again in a moment.');
+  }
   const body = (await res.json().catch(() => ({}))) as T & { error?: { description?: string } };
   if (!res.ok) {
     throw new DomainError('PAYMENT_ERROR', `Payment provider error: ${body.error?.description ?? `HTTP ${res.status}`}`);
@@ -57,6 +67,17 @@ export function createRazorpayOrder(params: { amountMinor: number; currency: str
 export function fetchRazorpayPayment(paymentId: string) {
   if (!/^pay_[A-Za-z0-9]+$/.test(paymentId)) throw new DomainError('VALIDATION', 'Invalid payment reference.');
   return call<RazorpayPayment>(`/payments/${paymentId}`);
+}
+
+/** All payment attempts for an order, as Razorpay records them. */
+export async function fetchRazorpayOrderPayments(orderId: string) {
+  if (!/^order_[A-Za-z0-9]+$/.test(orderId)) throw new DomainError('VALIDATION', 'Invalid order reference.');
+  return (await call<{ items: RazorpayPayment[] }>(`/orders/${orderId}/payments`)).items;
+}
+
+export function fetchRazorpayRefund(refundId: string) {
+  if (!/^rfnd_[A-Za-z0-9]+$/.test(refundId)) throw new DomainError('VALIDATION', 'Invalid refund reference.');
+  return call<{ id: string; status: 'pending' | 'processed' | 'failed' }>(`/refunds/${refundId}`);
 }
 
 export function createRazorpayRefund(paymentId: string, amountMinor: number, idempotencyKey: string) {

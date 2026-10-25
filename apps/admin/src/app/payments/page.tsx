@@ -1,18 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatDateTime, formatMoney } from '@studio/ui';
-import { useAdminData } from '../../lib/client';
+import { errorText, mutate, useAdminData } from '../../lib/client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export default function PaymentsPage() {
   const [simulated, setSimulated] = useState('');
-  const { data, error } = useAdminData<any>(`/api/v1/admin/payments${simulated ? `?simulated=${simulated}` : ''}`);
+  const { data, error, reload } = useAdminData<any>(`/api/v1/admin/payments${simulated ? `?simulated=${simulated}` : ''}`);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  async function syncRefunds(announce: boolean) {
+    const r = await mutate<{ checked: number; updated: number }>('/api/v1/admin/refunds/sync', 'POST');
+    if (r.ok && r.data.updated) reload();
+    if (announce || (r.ok && r.data.updated)) setSyncMsg(r.ok ? `Checked ${r.data.checked} pending refund(s) with Razorpay; ${r.data.updated} updated.` : errorText(r.error));
+  }
+  // Without webhooks, pending Razorpay refunds are completed by checking with the provider.
+  useEffect(() => { void syncRefunds(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="stack">
       <h1>Payments</h1>
-      <div className="alert alert--warning"><p>Rows marked <strong>Simulated</strong> come from demo mode. No money moved, and they are never counted as real revenue.</p></div>
+      <div className="alert alert--warning"><p>Rows marked <strong>Simulated</strong> come from demo mode or Razorpay test mode. No money moved, and they are never counted as real revenue.</p></div>
+      <div className="cluster"><button type="button" className="btn btn--ghost btn--sm" onClick={() => syncRefunds(true)}>Check pending refunds with Razorpay</button>{syncMsg && <span className="small muted" role="status">{syncMsg}</span>}</div>
       <div className="toolbar">
         <div className="field"><label htmlFor="sim">Show</label>
           <select id="sim" className="select" value={simulated} onChange={(e) => setSimulated(e.target.value)}>

@@ -20,6 +20,7 @@ import {
   getEnquiryAdmin,
   getIntegrationStatuses,
   issueRefund,
+  syncPendingRefunds,
   listAuditLogs,
   listEnquiries,
   listNotifications,
@@ -313,6 +314,11 @@ export function registerAdminRoutes(app: FastifyInstance) {
     method: 'POST', url: '/api/v1/admin/transactions/:id/refund', summary: 'Refund all or part of a successful charge', tags: ['Admin: payments'], access: 'payments.refund', params: idParam,
     body: z.object({ amountMinor: z.coerce.number().int().positive(), reason: z.string().min(3).max(500) }),
     handler: ({ params, body, actor, ctx }) => issueRefund(params.id, body.amountMinor, body.reason, actor!, ctx),
+  });
+
+  defineRoute(app, {
+    method: 'POST', url: '/api/v1/admin/refunds/sync', summary: 'Check pending Razorpay refunds with the provider and complete those it has processed', tags: ['Admin: payments'], access: 'payments.read',
+    handler: () => syncPendingRefunds(),
   });
 
   // --- Settings & integrations -----------------------------------------------------

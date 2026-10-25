@@ -9,10 +9,10 @@ export function createNextConfig({ extraConnectSrc = [] } = {}) {
   const api = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000';
   const isProd = process.env.NODE_ENV === 'production';
 
-  // Razorpay Checkout and Google Maps embeds are the only third parties allowed.
+  // Razorpay Checkout (incl. its risk-detection script) and Google Maps embeds are the only third parties allowed.
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"} https://checkout.razorpay.com`,
+    `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"} https://checkout.razorpay.com https://cdn.razorpay.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
@@ -30,7 +30,7 @@ export function createNextConfig({ extraConnectSrc = [] } = {}) {
     { key: 'X-Frame-Options', value: 'DENY' },
     // Prevents guest access tokens in URLs from leaking to other origins.
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com")' },
+    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com")' },
     { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
     ...(isProd ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }] : []),
   ];

@@ -234,7 +234,7 @@ function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, re
                   {booking.payments.map((p, i) => (
                     <tr key={i}>
                       <td>{formatDateTime(p.at, tz)}</td>
-                      <td>{p.type === 'CHARGE' ? 'Payment' : 'Refund'} {p.isSimulated && <span className="badge badge--demo">Simulated</span>}</td>
+                      <td>{p.type === 'CHARGE' ? 'Payment' : 'Refund'} {p.isSimulated && <span className="badge badge--demo">{site.integrations.paymentsTestMode ? 'Test mode' : 'Simulated'}</span>}</td>
                       <td>{p.status.toLowerCase()}</td>
                       <td className="price">{formatMoney(p.amountMinor, booking.currency)}</td>
                     </tr>
@@ -345,6 +345,27 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'danger' | 'warning' | 'success' | 'info'; text: string } | null>(null);
   const keyRef = useRef<Record<string, string>>({});
+  const [checking, setChecking] = useState(false);
+  const provider = site.integrations.paymentsMode === 'live';
+
+  // If a checkout was started but the browser never came back (closed tab, lost
+  // connection), ask the server to check the outcome with the provider.
+  const syncWithProvider = useCallback(async (announce: boolean) => {
+    setChecking(true);
+    const res = await api<{ recorded: number; booking: BookingDto }>(`/api/v1/bookings/${booking.reference}/payments/sync`, { body: {}, headers });
+    setChecking(false);
+    if (res.ok) {
+      onUpdated(res.data.booking);
+      if (res.data.recorded > 0) setMessage({ tone: 'success', text: 'Payment confirmed with the provider.' });
+      else if (announce) setMessage({ tone: 'info', text: 'No completed payment found yet. If you just paid, wait a moment and check again.' });
+    } else if (announce) setMessage({ tone: 'danger', text: res.error.message });
+  }, [booking.reference, headers, onUpdated]);
+
+  const pendingAtProvider = provider && booking.paymentStatus === 'PENDING';
+  useEffect(() => {
+    if (pendingAtProvider) void syncWithProvider(false);
+    // Run once per page load for this booking.
+  }, [booking.reference]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (site.integrations.paymentsMode === 'disabled') {
     return <div className="alert alert--info">Online payment is not enabled yet. The team will contact you to arrange payment.</div>;
@@ -360,6 +381,8 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
     });
     setBusy(false);
     if (!res.ok) {
+      // A failed attempt is not resumable: the next click starts a fresh one.
+      delete keyRef.current[purpose];
       setMessage({ tone: 'danger', text: res.error.message });
       return;
     }
@@ -393,7 +416,12 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
           );
         } else setMessage({ tone: 'danger', text: v.error.message });
       },
-      modal: { ondismiss: () => setMessage({ tone: 'warning', text: 'Payment window closed. You can try again while the slot is held.' }) },
+      modal: {
+        ondismiss: () => {
+          setMessage({ tone: 'warning', text: 'Payment window closed. You can try again while the slot is held.' });
+          void syncWithProvider(false);
+        },
+      },
     });
     rzp.open();
   }
@@ -424,7 +452,19 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
           <p>Payments on this demonstration site are simulated. No card details are collected and no money is taken.</p>
         </div>
       )}
+      {site.integrations.paymentsTestMode && (
+        <div className="alert alert--warning" style={{ marginBottom: 'var(--space-4)' }}>
+          <strong>Razorpay test mode</strong>
+          <p>Payments go through Razorpay&rsquo;s real checkout in test mode. No money is taken. Use Razorpay&rsquo;s test card 5267 3181 8797 5449 (any future expiry, any CVV), or Netbanking with any bank and choose <em>Success</em> on the test bank page.</p>
+        </div>
+      )}
       {message && <div className={`alert alert--${message.tone}`} role="status" style={{ marginBottom: 'var(--space-4)' }}>{message.text}</div>}
+      {pendingAtProvider && (
+        <p className="small" style={{ marginBottom: 'var(--space-3)' }}>
+          Already completed a payment?{' '}
+          <button type="button" className="btn btn--ghost btn--sm" disabled={checking} onClick={() => syncWithProvider(true)}>{checking ? 'Checking…' : 'Check payment status'}</button>
+        </p>
+      )}
       {!demo ? (
         <div className="cluster">
           {purposes.map((p) => (

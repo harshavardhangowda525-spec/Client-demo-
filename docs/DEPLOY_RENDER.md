@@ -18,6 +18,15 @@
 
 **Already deployed the earlier version?** After merging, open the Blueprint in Render and choose **Sync** (or **Manual sync**). Render then creates the new `infinity-demo-studio` service and adds `SITE_URL_STUDIO` to the env group. Redeploy the API: it applies the new migrations, and because the existing demo database has no studio content, it reloads the full demo data set. Bookings made while testing the old demo are removed. It refuses to do this if the database holds any non-demo bookings, and logs a warning instead.
 
+**Turn on Razorpay test payments:**
+1. Click **Dashboard** → **infinity-demo-api** → **Environment** (left menu).
+2. Edit `PAYMENTS_MODE` and change `demo` to `live`.
+3. Click **Add Environment Variable** twice to add `RAZORPAY_KEY_ID` (the `rzp_test_…` key) and `RAZORPAY_KEY_SECRET`.
+4. Click **Save, rebuild, and deploy** (or **Save changes**, then **Manual Deploy → Deploy latest commit**).
+5. Open a booking on any site and click **Pay deposit**. Razorpay's checkout opens with a *Test Mode* ribbon.
+
+To switch back to simulated payments, set `PAYMENTS_MODE` to `demo` and redeploy the API.
+
 **Free plan notes:**
 - Services sleep after 15 minutes idle; the first request takes about a minute. Open every link shortly before a meeting.
 - The free database expires after 30 days.

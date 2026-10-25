@@ -36,7 +36,7 @@ export default function DashboardPage() {
     <div className="stack-lg">
       <div>
         <h1>Dashboard</h1>
-        <p className="muted small">Calculated from live database records at {new Date(data.generatedAt).toLocaleTimeString('en-IN')}. Simulated payments are shown separately and never counted as revenue.</p>
+        <p className="muted small">Calculated from live database records at {new Date(data.generatedAt).toLocaleTimeString('en-IN')}. Simulated and Razorpay test-mode payments are shown separately and never counted as revenue.</p>
       </div>
       <div className="stat-grid">
         <Link href="/bookings?status=ENQUIRY_SUBMITTED" className="stat" style={{ textDecoration: 'none' }}><div className="value">{data.needsReview}</div><div className="label">Bookings needing review</div></Link>
@@ -45,7 +45,7 @@ export default function DashboardPage() {
         <div className="stat"><div className="value">{data.followUpsDue}</div><div className="label">Follow-ups due within 7 days</div></div>
         <div className="stat"><div className="value">{data.newContactMessages}</div><div className="label">New contact messages</div></div>
         <div className="stat"><div className="value">{money(l.realCharges)}</div><div className="label">Real payments, 30 days ({count(l.realCharges)})</div></div>
-        <div className="stat sim"><div className="value">{money(l.simulatedCharges)}</div><div className="label">Simulated payments, 30 days ({count(l.simulatedCharges)}). Not revenue.</div></div>
+        <div className="stat sim"><div className="value">{money(l.simulatedCharges)}</div><div className="label">Simulated / test-mode payments, 30 days ({count(l.simulatedCharges)}). Not revenue.</div></div>
         <div className="stat"><div className="value">{formatMoney(data.outstandingBalanceMinor.real)}</div><div className="label">Outstanding balances (real bookings)</div></div>
         <div className="stat"><div className="value">{l.failedPaymentOrders as number}</div><div className="label">Failed payment attempts, 30 days</div></div>
       </div>

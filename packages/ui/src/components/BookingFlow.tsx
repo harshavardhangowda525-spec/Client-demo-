@@ -453,7 +453,7 @@ export function BookingFlow({ brand, site, services, locations, me, initial = {}
               ) : quote && quote.depositMinor > 0 && site.integrations.paymentsMode !== 'disabled' ? (
                 <p>
                   We hold this slot for {site.bookingRules.holdMinutes} minutes while you pay the deposit of {formatMoney(quote.depositMinor)}. The booking is confirmed only after the payment is verified.
-                  {site.integrations.paymentsSimulated ? ' In this demo, payment is simulated and no money is taken.' : ''}
+                  {site.integrations.paymentsSimulated ? ' In this demo, payment is simulated and no money is taken.' : site.integrations.paymentsTestMode ? ' Payments run in Razorpay test mode; no money is taken.' : ''}
                 </p>
               ) : (
                 <p>The team will review and confirm your booking.</p>

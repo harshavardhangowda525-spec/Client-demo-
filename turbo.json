@@ -24,14 +24,24 @@
       "cache": false,
       "persistent": true,
       "passThroughEnv": [
-        "RATE_LIMIT_PER_MINUTE"
+        "RATE_LIMIT_PER_MINUTE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "NODE_USE_ENV_PROXY",
+        "NODE_EXTRA_CA_CERTS"
       ]
     },
     "start": {
       "cache": false,
       "persistent": true,
       "passThroughEnv": [
-        "RATE_LIMIT_PER_MINUTE"
+        "RATE_LIMIT_PER_MINUTE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "NODE_USE_ENV_PROXY",
+        "NODE_EXTRA_CA_CERTS"
       ]
     }
   }
