@@ -371,7 +371,7 @@ const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].repla
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
   (ifEmpty
-    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.booking.count({ where: { isDemo: false } })]).then(([users, studio, real]) => {
+    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count()]).then(([users, studio]) => {
         const skip = { users: [] as { email: string; role: string; password: string }[] };
         if (users === 0) return seedDemo({ force: process.argv.includes('--force') });
         if (studio > 0) {
