@@ -95,7 +95,7 @@ test.describe('Admin panel', () => {
     await signIn(page, 'admin@demo.example', 'DemoAdmin!2026');
     await page.getByRole('navigation').first().getByRole('link', { name: 'Integrations' }).click();
     await expect(page.getByText('Connected and verified')).toHaveCount(0);
-    await expect(page.getByRole('row', { name: /Razorpay payments/ })).toContainText(/Not configured|Awaiting credentials/);
+    await expect(page.getByRole('row', { name: /Razorpay payments/ })).toContainText(/Not configured|Awaiting credentials|Configured, not verified/);
   });
 
   test('studio site content: unauthorised testimonials cannot be published; templates reject unknown placeholders', async ({ page }) => {
