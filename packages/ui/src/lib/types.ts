@@ -11,7 +11,7 @@ export interface SiteConfig {
   bookingRules: { leadTimeHours: number; maxAdvanceDays: number; holdMinutes: number; allowGuestBookings: boolean; isDemoAvailability: boolean };
   pricing: { taxLabel: string; taxRateBps: number; depositBps: number; isSample: boolean };
   cancellationPolicy: { text: string; isSample: boolean };
-  integrations: { paymentsMode: 'demo' | 'live' | 'disabled'; paymentsSimulated: boolean; mapsEmbedKey: string | null; emailDelivery: boolean; whatsappDelivery?: boolean };
+  integrations: { paymentsMode: 'demo' | 'live' | 'disabled'; paymentsSimulated: boolean; paymentsTestMode?: boolean; mapsEmbedKey: string | null; emailDelivery: boolean; whatsappDelivery?: boolean };
 }
 
 export interface Category {

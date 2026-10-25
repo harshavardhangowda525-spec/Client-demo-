@@ -36,7 +36,7 @@ export function Receipt({ reference, token: urlToken, businessName }: { referenc
           <p className="small muted" style={{ margin: 0 }}>Status: {booking.statusLabel}</p>
         </div>
       </header>
-      {(anySimulated || booking.isDemo) && <p className="alert alert--info small" style={{ margin: 0 }}>Demonstration record. {anySimulated ? 'Payments shown were simulated; no money was taken.' : ''} This is not a tax invoice.</p>}
+      {(anySimulated || booking.isDemo) && <p className="alert alert--info small" style={{ margin: 0 }}>Demonstration record. {anySimulated ? 'Payments shown were simulated or made in Razorpay test mode; no money was taken.' : ''} This is not a tax invoice.</p>}
       <dl className="dl">
         <dt>Billed to</dt><dd>{booking.contact.name} · {booking.contact.email}</dd>
         <dt>Service</dt><dd>{booking.service.name}{booking.package ? ` · ${booking.package.name}` : ''}</dd>
@@ -61,7 +61,7 @@ export function Receipt({ reference, token: urlToken, businessName }: { referenc
           <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col" style={{ textAlign: 'right' }}>Amount</th></tr></thead>
           <tbody>
             {booking.payments.length ? booking.payments.map((p, i) => (
-              <tr key={i}><td>{formatDateTime(p.at, booking.timezone)}</td><td>{PAYMENT_LABEL[p.type] ?? p.type}{p.isSimulated ? ' (simulated)' : ''}</td><td>{p.status.toLowerCase()}</td><td style={{ textAlign: 'right' }}>{formatMoney(p.amountMinor, booking.currency)}</td></tr>
+              <tr key={i}><td>{formatDateTime(p.at, booking.timezone)}</td><td>{PAYMENT_LABEL[p.type] ?? p.type}{p.isSimulated ? ' (no real money)' : ''}</td><td>{p.status.toLowerCase()}</td><td style={{ textAlign: 'right' }}>{formatMoney(p.amountMinor, booking.currency)}</td></tr>
             )) : <tr><td colSpan={4} className="muted">No payments recorded.</td></tr>}
           </tbody>
         </table>

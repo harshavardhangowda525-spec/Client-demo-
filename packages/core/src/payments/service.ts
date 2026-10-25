@@ -10,8 +10,11 @@ import { siteContentFor, getAllSettings } from '../settings';
 import {
   createRazorpayOrder,
   createRazorpayRefund,
+  fetchRazorpayOrderPayments,
   fetchRazorpayPayment,
+  fetchRazorpayRefund,
   razorpayConfigured,
+  razorpayTestMode,
   verifyCheckoutSignature,
   verifyWebhookSignature,
 } from './razorpay';
@@ -82,6 +85,10 @@ export async function startPayment(
   const existing = await db.paymentOrder.findUnique({ where: { idempotencyKey: key } });
   if (existing) {
     if (existing.bookingId !== booking.id) throw new DomainError('CONFLICT', 'Idempotency key already used for a different booking.');
+    // An attempt that never reached the provider can't be resumed; the client retries with a new key.
+    if (existing.status === 'FAILED' && existing.provider === 'RAZORPAY' && !existing.providerOrderId) {
+      throw new DomainError('PAYMENT_ERROR', 'The previous payment attempt could not be started. Please try again.');
+    }
     return { order: existing, checkout: await checkoutFor(existing, booking) };
   }
 
@@ -90,7 +97,7 @@ export async function startPayment(
 
   let order = await db.$transaction(async (tx) => {
     const created = await tx.paymentOrder.create({
-      data: { bookingId: booking.id, provider, purpose, amountMinor, currency: booking.currency, idempotencyKey: key, isSimulated: provider === 'DEMO', status: 'CREATED' },
+      data: { bookingId: booking.id, provider, purpose, amountMinor, currency: booking.currency, idempotencyKey: key, isSimulated: provider === 'DEMO' || razorpayTestMode(), status: 'CREATED' },
     });
     if (booking.status === 'AWAITING_PAYMENT') {
       await transitionBooking({ bookingId: booking.id, to: 'PAYMENT_PENDING', actorType: 'SYSTEM', reason: provider === 'DEMO' ? 'Simulated checkout started' : 'Checkout started' }, tx);
@@ -138,7 +145,7 @@ async function checkoutFor(order: PaymentOrder, booking: Booking): Promise<Check
     keyId: getEnv().RAZORPAY_KEY_ID!,
     amountMinor: order.amountMinor,
     currency: order.currency,
-    merchantName: siteContentFor(settings, booking.brand).name,
+    merchantName: siteContentFor(settings, booking.sourceSite ?? booking.brand).name,
     prefill: { name: booking.contactName, email: booking.contactEmail, contact: booking.contactPhone ?? undefined },
   };
 }
@@ -197,7 +204,7 @@ export async function recordChargeResult(orderId: string, result: ChargeResult, 
     }
 
     const booking = await tx.booking.findUniqueOrThrow({ where: { id: order.bookingId } });
-    const verifiedBy = order.isSimulated ? 'Simulated demo payment (no money moved)' : `Payment verified via ${result.source}`;
+    const verifiedBy = order.provider === 'DEMO' ? 'Simulated demo payment (no money moved)' : `Payment verified via ${result.source}${order.isSimulated ? ' (Razorpay test mode, no real money)' : ''}`;
 
     if (status === 'SUCCEEDED') {
       const updatedOrder = await tx.paymentOrder.update({ where: { id: order.id }, data: { status: 'SUCCEEDED', failureReason: null } });
@@ -294,6 +301,27 @@ export async function confirmRazorpayCheckout(
   }, db);
 }
 
+/**
+ * Asks Razorpay for the outcome of a booking's open orders. This covers a
+ * customer whose browser never returned from checkout (closed tab, lost
+ * connection) when webhooks are not configured. Only captured payments are
+ * recorded, using the same checks as every other path; failed attempts leave
+ * the order open so the customer can try again.
+ */
+export async function syncRazorpayPayments(reference: string, viewer: Viewer, db: PrismaClient = prisma) {
+  const booking = await getBookingForViewer(reference, viewer, db);
+  if (activePaymentProvider() !== 'RAZORPAY') return { checked: 0, recorded: 0 };
+  const orders = await db.paymentOrder.findMany({ where: { bookingId: booking.id, provider: 'RAZORPAY', status: 'PENDING', providerOrderId: { not: null } } });
+  let recorded = 0;
+  for (const order of orders) {
+    const captured = (await fetchRazorpayOrderPayments(order.providerOrderId!)).find((p) => p.status === 'captured' && p.order_id === order.providerOrderId);
+    if (!captured) continue;
+    await recordChargeResult(order.id, { providerPaymentId: captured.id, status: 'SUCCEEDED', amountMinor: captured.amount, currency: captured.currency, source: 'Razorpay API (status check)' }, db);
+    recorded += 1;
+  }
+  return { checked: orders.length, recorded };
+}
+
 interface RazorpayWebhookBody {
   event: string;
   payload?: {
@@ -382,15 +410,32 @@ export async function issueRefund(transactionId: string, amountMinor: number, re
 
   await recordAudit(actor, { action: 'refund.requested', entityType: 'Refund', entityId: refund.id, summary: `Refund of ${amountMinor} requested${refund.isSimulated ? ' (simulated)' : ''}`, after: { amountMinor, reason } }, ctx, db);
 
-  if (refund.isSimulated) return finaliseRefund(refund.id, true, db);
+  // Demo refunds complete locally; Razorpay refunds (live or test mode) go through the provider.
+  if (refund.transaction.provider === 'DEMO') return finaliseRefund(refund.id, true, db);
 
   try {
     const rp = await createRazorpayRefund(refund.transaction.providerPaymentId!, amountMinor, `refund_${refund.id}`);
-    return db.refund.update({ where: { id: refund.id }, data: { status: 'PENDING', providerRefundId: rp.id } });
+    const pending = await db.refund.update({ where: { id: refund.id }, data: { status: 'PENDING', providerRefundId: rp.id } });
+    // Razorpay usually reports refunds as processed straight away; otherwise the refund.processed webhook completes it.
+    return rp.status === 'processed' ? finaliseRefund(refund.id, true, db) : pending;
   } catch (err) {
     await db.refund.update({ where: { id: refund.id }, data: { status: 'FAILED' } });
     throw err;
   }
+}
+
+/** Completes pending Razorpay refunds that the provider has since processed or failed (when webhooks are not configured). */
+export async function syncPendingRefunds(db: PrismaClient = prisma) {
+  if (activePaymentProvider() !== 'RAZORPAY') return { checked: 0, updated: 0 };
+  const pending = await db.refund.findMany({ where: { status: 'PENDING', providerRefundId: { not: null }, transaction: { provider: 'RAZORPAY' } }, take: 50 });
+  let updated = 0;
+  for (const r of pending) {
+    const remote = await fetchRazorpayRefund(r.providerRefundId!);
+    if (remote.status === 'pending') continue;
+    await finaliseRefund(r.id, remote.status === 'processed', db);
+    updated += 1;
+  }
+  return { checked: pending.length, updated };
 }
 
 async function finaliseRefund(refundId: string, succeeded: boolean, db: PrismaClient) {

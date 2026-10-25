@@ -191,6 +191,7 @@ export function publicIntegrationFlags() {
   return {
     paymentsMode: env.PAYMENTS_MODE,
     paymentsSimulated: env.PAYMENTS_MODE === 'demo',
+    paymentsTestMode: env.PAYMENTS_MODE === 'live' && !!env.RAZORPAY_KEY_ID?.startsWith('rzp_test_'),
     mapsEmbedKey: env.GOOGLE_MAPS_EMBED_API_KEY ?? null,
     emailDelivery: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
     whatsappDelivery: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM),

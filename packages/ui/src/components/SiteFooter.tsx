@@ -60,7 +60,7 @@ export function SiteFooter({ shell, email, phone, tagline }: { shell: SiteShell;
 export function DemoBar() {
   return (
     <div className="demo-bar" role="note">
-      Demonstration site: sample services, prices, availability and AI-generated imagery. Payments are simulated and no money is taken.
+      Demonstration site: sample services, prices, availability and AI-generated imagery. Payments are simulated or run in Razorpay test mode, and no money is taken.
     </div>
   );
 }

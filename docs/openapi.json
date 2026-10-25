@@ -796,6 +796,42 @@
         }
       }
     },
+    "/api/v1/bookings/{reference}/payments/sync": {
+      "post": {
+        "summary": "Ask Razorpay for the outcome of open payments on this booking (covers checkouts whose browser never returned)",
+        "tags": [
+          "Payments"
+        ],
+        "description": "Access: Public. Rate limit: 30 per 10 minutes.",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
     "/api/v1/payments/razorpay/{orderId}/confirm": {
       "post": {
         "summary": "Razorpay checkout callback: verifies the signature, then confirms status with the Razorpay API",
@@ -2891,6 +2927,24 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/sync": {
+      "post": {
+        "summary": "Check pending Razorpay refunds with the provider and complete those it has processed",
+        "tags": [
+          "Admin: payments"
+        ],
+        "description": "Access: Staff with permission `payments.read`.",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Success"

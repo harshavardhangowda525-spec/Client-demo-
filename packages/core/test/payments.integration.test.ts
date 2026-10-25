@@ -1,9 +1,10 @@
 import { createHmac } from 'node:crypto';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '@studio/db';
 import { createBooking } from '../src/booking/service';
-import { handleRazorpayWebhook, issueRefund, recordChargeResult, simulateDemoPayment, startPayment } from '../src/payments/service';
+import { handleRazorpayWebhook, issueRefund, recordChargeResult, simulateDemoPayment, startPayment, syncRazorpayPayments } from '../src/payments/service';
 import { verifyCheckoutSignature, verifyWebhookSignature } from '../src/payments/razorpay';
+import { resetEnvCache } from '../src/env';
 import { actor, futureWeekday, guest, ids, resetDatabase } from './helpers';
 
 let I: Awaited<ReturnType<typeof ids>>;
@@ -174,5 +175,65 @@ describe('Razorpay verification', () => {
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: order.bookingId } });
     expect(booking.amountPaidMinor).toBe(0);
     expect(booking.status).toBe('AWAITING_PAYMENT');
+  });
+});
+
+describe('Razorpay test mode', () => {
+  it('payments made with rzp_test_ keys go through Razorpay but are never counted as real money', async () => {
+    const saved = { mode: process.env.PAYMENTS_MODE, id: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET };
+    Object.assign(process.env, { PAYMENTS_MODE: 'live', RAZORPAY_KEY_ID: 'rzp_test_unit', RAZORPAY_KEY_SECRET: 'unit_secret' });
+    resetEnvCache();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ id: 'order_UNIT1', amount: 1, currency: 'INR', status: 'created' }), { status: 200 })));
+    try {
+      const { booking, accessToken } = await newBooking();
+      const { order, checkout } = await startPayment(booking.reference, { actor: null, accessToken }, 'DEPOSIT', 'idem-test-mode-1');
+      expect(checkout.provider).toBe('RAZORPAY');
+      expect(order.isSimulated).toBe(true);
+      await recordChargeResult(order.id, { status: 'SUCCEEDED', amountMinor: order.amountMinor, currency: 'INR', providerPaymentId: 'pay_UNITTEST1', source: 'checkout' });
+      const tx = await prisma.transaction.findFirstOrThrow({ where: { bookingId: booking.id } });
+      expect(tx.provider).toBe('RAZORPAY');
+      expect(tx.isSimulated).toBe(true);
+      expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('CONFIRMED');
+    } finally {
+      vi.unstubAllGlobals();
+      for (const [k, v] of [['PAYMENTS_MODE', saved.mode], ['RAZORPAY_KEY_ID', saved.id], ['RAZORPAY_KEY_SECRET', saved.secret]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      resetEnvCache();
+    }
+  });
+
+  it('a checkout whose browser never returned is recorded by asking Razorpay; failed attempts are not', async () => {
+    const saved = { mode: process.env.PAYMENTS_MODE, id: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET };
+    Object.assign(process.env, { PAYMENTS_MODE: 'live', RAZORPAY_KEY_ID: 'rzp_test_unit', RAZORPAY_KEY_SECRET: 'unit_secret' });
+    resetEnvCache();
+    let payments: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const body = String(url).includes('/payments') ? { items: payments } : { id: 'order_SYNC1', amount: 1, currency: 'INR', status: 'created' };
+      return new Response(JSON.stringify(body), { status: 200 });
+    }));
+    try {
+      const { booking, accessToken } = await newBooking();
+      const viewer = { actor: null, accessToken };
+      const { order } = await startPayment(booking.reference, viewer, 'DEPOSIT', 'idem-sync-1');
+      payments = [{ id: 'pay_FAILED1', order_id: 'order_SYNC1', amount: order.amountMinor, currency: 'INR', status: 'failed' }];
+      expect(await syncRazorpayPayments(booking.reference, viewer)).toEqual({ checked: 1, recorded: 0 });
+      expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).amountPaidMinor).toBe(0);
+      payments = [...payments, { id: 'pay_OK1', order_id: 'order_SYNC1', amount: order.amountMinor, currency: 'INR', status: 'captured' }];
+      expect(await syncRazorpayPayments(booking.reference, viewer)).toEqual({ checked: 1, recorded: 1 });
+      const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(after.status).toBe('CONFIRMED');
+      expect(after.amountPaidMinor).toBe(order.amountMinor);
+      // Checking again changes nothing.
+      expect(await syncRazorpayPayments(booking.reference, viewer)).toEqual({ checked: 0, recorded: 0 });
+    } finally {
+      vi.unstubAllGlobals();
+      for (const [k, v] of [['PAYMENTS_MODE', saved.mode], ['RAZORPAY_KEY_ID', saved.id], ['RAZORPAY_KEY_SECRET', saved.secret]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      resetEnvCache();
+    }
   });
 });

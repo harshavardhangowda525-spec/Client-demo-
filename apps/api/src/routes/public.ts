@@ -6,6 +6,7 @@ import {
   bookingLookupSchema,
   brandSchema,
   confirmRazorpayCheckout,
+  syncRazorpayPayments,
   contactMessageSchema,
   createBooking,
   createBookingSchema,
@@ -165,6 +166,17 @@ export function registerPublicRoutes(app: FastifyInstance) {
       await notifyPayment(order.booking, order.status === 'SUCCEEDED', order.amountMinor, true);
       if (order.booking.status === 'CONFIRMED') await notifyBookingStatus(order.booking);
       return { orderStatus: order.status, simulated: true, booking: customerBookingDto(await getBookingForViewer(order.booking.reference, viewer)) };
+    },
+  });
+
+  defineRoute(app, {
+    method: 'POST', url: '/api/v1/bookings/:reference/payments/sync', summary: 'Ask Razorpay for the outcome of open payments on this booking (covers checkouts whose browser never returned)', tags: ['Payments'], access: 'public',
+    params: z.object({ reference: z.string().trim().toUpperCase().regex(/^[A-Z]{2}-[0-9A-Z]{8}$/) }), query: tokenQuery,
+    rateLimit: { max: 30, timeWindow: '10 minutes' },
+    handler: async ({ params, query, actor, req }) => {
+      const viewer = { actor, accessToken: accessTokenFrom(req.headers, query) };
+      const result = await syncRazorpayPayments(params.reference, viewer);
+      return { ...result, booking: customerBookingDto(await getBookingForViewer(params.reference, viewer)) };
     },
   });
 
