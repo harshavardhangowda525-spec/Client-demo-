@@ -38,12 +38,13 @@ export const serviceInputSchema = z
     locationIds: z.array(z.string()).default([]),
     resourceIds: z.array(z.string()).default([]),
     addOnIds: z.array(z.string()).default([]),
-    discoveryCategoryIds: z.array(z.string()).default([]),
-    equipmentIds: z.array(z.string()).default([]),
-    galleryImageKeys: z.array(text(120).min(1)).max(12).default([]),
+    // Studio-site fields are optional so older clients that don't send them leave them untouched.
+    discoveryCategoryIds: z.array(z.string()).optional(),
+    equipmentIds: z.array(z.string()).optional(),
+    galleryImageKeys: z.array(text(120).min(1)).max(12).optional(),
     preparation: text(3000).optional().nullable(),
     depositBpsOverride: z.coerce.number().int().min(0).max(10_000).optional().nullable(),
-    isFeatured: z.boolean().default(false),
+    isFeatured: z.boolean().optional(),
   })
   .refine((s) => s.maxDurationMin >= s.minDurationMin, { message: 'Maximum duration must be at least the minimum', path: ['maxDurationMin'] })
   .refine((s) => s.defaultDurationMin >= s.minDurationMin && s.defaultDurationMin <= s.maxDurationMin, { message: 'Default duration must be within the min/max range', path: ['defaultDurationMin'] })
@@ -186,10 +187,14 @@ export async function upsertService(id: string | null, raw: unknown, actor: Acto
     await tx.serviceLocation.deleteMany({ where: { serviceId: service.id } });
     await tx.serviceResource.deleteMany({ where: { serviceId: service.id } });
     await tx.serviceAddOn.deleteMany({ where: { serviceId: service.id } });
-    await tx.serviceDiscoveryCategory.deleteMany({ where: { serviceId: service.id } });
-    await tx.serviceEquipment.deleteMany({ where: { serviceId: service.id } });
-    if (discoveryCategoryIds.length) await tx.serviceDiscoveryCategory.createMany({ data: discoveryCategoryIds.map((categoryId) => ({ serviceId: service.id, categoryId })) });
-    if (equipmentIds.length) await tx.serviceEquipment.createMany({ data: equipmentIds.map((equipmentId) => ({ serviceId: service.id, equipmentId })) });
+    if (discoveryCategoryIds) {
+      await tx.serviceDiscoveryCategory.deleteMany({ where: { serviceId: service.id } });
+      if (discoveryCategoryIds.length) await tx.serviceDiscoveryCategory.createMany({ data: discoveryCategoryIds.map((categoryId) => ({ serviceId: service.id, categoryId })) });
+    }
+    if (equipmentIds) {
+      await tx.serviceEquipment.deleteMany({ where: { serviceId: service.id } });
+      if (equipmentIds.length) await tx.serviceEquipment.createMany({ data: equipmentIds.map((equipmentId) => ({ serviceId: service.id, equipmentId })) });
+    }
     if (locationIds.length) await tx.serviceLocation.createMany({ data: locationIds.map((locationId) => ({ serviceId: service.id, locationId })) });
     if (resourceIds.length) await tx.serviceResource.createMany({ data: resourceIds.map((resourceId) => ({ serviceId: service.id, resourceId })) });
     if (addOnIds.length) await tx.serviceAddOn.createMany({ data: addOnIds.map((addOnId) => ({ serviceId: service.id, addOnId })) });

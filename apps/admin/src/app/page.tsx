@@ -15,6 +15,9 @@ interface Dashboard {
   last30Days: Record<string, { amountMinor: number; count: number } | number>;
   outstandingBalanceMinor: { real: number; demo: number };
   upcoming: { id: string; reference: string; brand: string; startsAt: string; timezone: string; service: string; location: string; contactName: string; status: string }[];
+  totals: { bookings: number; enquiries: number; pendingReschedules: number };
+  popularServices: { serviceId: string; name: string; bookings: number }[];
+  occupancyToday: { resourceId: string; resource: string; location: string; openMinutes: number; bookedMinutes: number }[];
   recent: { id: string; reference: string; brand: string; status: string; createdAt: string; service: string; contactName: string; totalMinor: number; isDemo: boolean }[];
 }
 
@@ -38,6 +41,7 @@ export default function DashboardPage() {
       <div className="stat-grid">
         <Link href="/bookings?status=ENQUIRY_SUBMITTED" className="stat" style={{ textDecoration: 'none' }}><div className="value">{data.needsReview}</div><div className="label">Bookings needing review</div></Link>
         <Link href="/enquiries" className="stat" style={{ textDecoration: 'none' }}><div className="value">{openEnquiries}</div><div className="label">Open event enquiries</div></Link>
+        <Link href="/reschedule-requests" className="stat" style={{ textDecoration: 'none' }}><div className="value">{data.totals.pendingReschedules}</div><div className="label">Reschedule requests to decide</div></Link>
         <div className="stat"><div className="value">{data.followUpsDue}</div><div className="label">Follow-ups due within 7 days</div></div>
         <div className="stat"><div className="value">{data.newContactMessages}</div><div className="label">New contact messages</div></div>
         <div className="stat"><div className="value">{money(l.realCharges)}</div><div className="label">Real payments, 30 days ({count(l.realCharges)})</div></div>
@@ -66,6 +70,36 @@ export default function DashboardPage() {
             </tbody></table>
           ) : <div className="empty">No bookings yet.</div>}
           <p className="small muted" style={{ marginTop: 'var(--space-3)' }}>Active by website: {Object.entries(data.activeBookingsByBrand).map(([b, n]) => `${b.toLowerCase()} ${n}`).join(' · ') || 'none'}</p>
+        </section>
+      </div>
+      <div className="cols">
+        <section className="panel">
+          <h2>Popular services (90 days)</h2>
+          {data.popularServices.length ? (
+            <table className="table"><tbody>
+              {data.popularServices.map((p) => <tr key={p.serviceId}><td>{p.name}</td><td className="price" style={{ textAlign: 'right' }}>{p.bookings} {p.bookings === 1 ? 'booking' : 'bookings'}</td></tr>)}
+            </tbody></table>
+          ) : <div className="empty">No bookings in the last 90 days.</div>}
+        </section>
+        <section className="panel">
+          <h2>Room occupancy today</h2>
+          {data.occupancyToday.length ? (
+            <table className="table">
+              <thead><tr><th>Room</th><th>Booked / open</th><th style={{ textAlign: 'right' }}>Occupancy</th></tr></thead>
+              <tbody>
+                {data.occupancyToday.map((o) => {
+                  const pct = o.openMinutes ? Math.min(100, Math.round((o.bookedMinutes / o.openMinutes) * 100)) : null;
+                  return (
+                    <tr key={o.resourceId}>
+                      <td>{o.resource}<div className="small muted">{o.location}</div></td>
+                      <td className="small">{Math.round(o.bookedMinutes / 6) / 10} h / {Math.round(o.openMinutes / 6) / 10} h</td>
+                      <td style={{ textAlign: 'right' }}>{pct == null ? <span className="small muted">Closed today</span> : <><meter min={0} max={100} value={pct} aria-label={`${o.resource} occupancy`} style={{ width: 70, verticalAlign: 'middle' }} /> {pct}%</>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : <div className="empty">No exclusive rooms configured.</div>}
         </section>
       </div>
       <section className="panel">

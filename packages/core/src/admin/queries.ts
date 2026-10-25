@@ -275,6 +275,7 @@ export async function getEnquiryAdmin(id: string, db: Db = prisma) {
       quotations: { include: { lines: { orderBy: { sortOrder: 'asc' } }, createdBy: { select: { name: true } } }, orderBy: { version: 'desc' } },
       followUps: { include: { author: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
       booking: { select: { id: true, reference: true, status: true } },
+      attachments: { select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       notifications: { orderBy: { createdAt: 'desc' } },
     },
   });

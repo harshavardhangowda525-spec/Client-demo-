@@ -11,6 +11,7 @@ import { saveEnquiryAttachment } from '../src/enquiry/attachments';
 import { quoteService } from '../src/pricing/service';
 import { getStudioHome, getStudioService, listStudioServices, searchStudio } from '../src/studio/catalog';
 import { saveTemplate, upsertTestimonial } from '../src/studio/admin';
+import { upsertService } from '../src/catalog/admin';
 import { setSavedService, listSavedServices, updateNotificationPreferences } from '../src/studio/customer';
 import { sendUpcomingReminders } from '../src/booking/notify';
 import { notify } from '../src/notifications/service';
@@ -87,6 +88,22 @@ describe('studio discovery', () => {
     expect(d.related.length).toBeGreaterThan(0);
     expect(d.locations[0]!.openingHours.length).toBeGreaterThan(0);
     await expect(getStudioService('corporate-event-management')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('editing a service without studio fields keeps its categories, equipment, gallery and featured flag', async () => {
+    const before = await prisma.service.findUniqueOrThrow({ where: { brand_slug: { brand: 'PHOTO', slug: 'portrait-photography' } }, include: { discoveryCategories: true, equipment: true, locations: true, resources: true, addOns: true } });
+    expect(before.discoveryCategories.length).toBeGreaterThan(0);
+    // A client that only knows the original fields (as older admin builds did).
+    const { brand, categoryId, slug, name, summary, description, bookingMode, pricingModel, basePriceMinor, hourlyRateMinor, minDurationMin, maxDurationMin, durationStepMin, defaultDurationMin, bufferMin, slotIntervalMin, requiresResource, imageKey, isActive, sortOrder } = before;
+    await upsertService(before.id, {
+      brand, categoryId, slug, name, summary, description, bookingMode, pricingModel, basePriceMinor, hourlyRateMinor, minDurationMin, maxDurationMin, durationStepMin, defaultDurationMin, bufferMin, slotIntervalMin, requiresResource, imageKey, isActive, sortOrder,
+      locationIds: before.locations.map((l) => l.locationId), resourceIds: before.resources.map((r) => r.resourceId), addOnIds: before.addOns.map((a) => a.addOnId),
+    }, await actor('admin@demo.example'));
+    const after = await prisma.service.findUniqueOrThrow({ where: { id: before.id }, include: { discoveryCategories: true, equipment: true } });
+    expect(after.discoveryCategories.length).toBe(before.discoveryCategories.length);
+    expect(after.equipment.length).toBe(before.equipment.length);
+    expect(after.galleryImageKeys).toEqual(before.galleryImageKeys);
+    expect(after.isFeatured).toBe(before.isFeatured);
   });
 });
 

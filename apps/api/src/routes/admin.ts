@@ -130,14 +130,14 @@ export function registerAdminRoutes(app: FastifyInstance) {
       const [services, addOns, categories] = await Promise.all([
         prisma.service.findMany({
           where,
-          include: { category: true, packages: { orderBy: { sortOrder: 'asc' } }, locations: true, resources: true, addOns: true, _count: { select: { bookings: true } } },
+          include: { category: true, packages: { orderBy: { sortOrder: 'asc' } }, locations: true, resources: true, addOns: true, discoveryCategories: true, equipment: true, _count: { select: { bookings: true } } },
           orderBy: [{ brand: 'asc' }, { sortOrder: 'asc' }],
         }),
         prisma.addOn.findMany({ where, orderBy: [{ brand: 'asc' }, { name: 'asc' }] }),
         prisma.category.findMany({ where, orderBy: [{ brand: 'asc' }, { sortOrder: 'asc' }] }),
       ]);
       return {
-        services: services.map((s) => ({ ...s, locationIds: s.locations.map((l) => l.locationId), resourceIds: s.resources.map((r) => r.resourceId), addOnIds: s.addOns.map((a) => a.addOnId) })),
+        services: services.map((s) => ({ ...s, locationIds: s.locations.map((l) => l.locationId), resourceIds: s.resources.map((r) => r.resourceId), addOnIds: s.addOns.map((a) => a.addOnId), discoveryCategoryIds: s.discoveryCategories.map((c) => c.categoryId), equipmentIds: s.equipment.map((e) => e.equipmentId) })),
         addOns,
         categories,
       };
