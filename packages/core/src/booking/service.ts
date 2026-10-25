@@ -13,7 +13,7 @@ import type { PriceBreakdown } from '../pricing/engine';
 import { expireStaleHolds, loadAvailabilityContext } from '../availability/service';
 import { windowFitsResource } from '../availability/engine';
 import { resolveCustomer } from '../customers/service';
-import { canTransition, isActiveStatus, type BookingStatusValue, type TransitionActor } from './status';
+import { ACTIVE_BOOKING_STATUSES, canTransition, isActiveStatus, type BookingStatusValue, type TransitionActor } from './status';
 
 export const TX_OPTIONS = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 20_000, maxWait: 10_000 };
 
@@ -143,7 +143,7 @@ export async function createBooking(
   raw: unknown,
   actor: Actor | null,
   ctx: RequestContext = {},
-  opts: { now?: Date; db?: PrismaClient; isDemo?: boolean } = {},
+  opts: { now?: Date; db?: PrismaClient; isDemo?: boolean; sourceSite?: 'STUDIO' | null } = {},
 ): Promise<CreateBookingResult> {
   const db = opts.db ?? prisma;
   const now = opts.now ?? new Date();
@@ -190,12 +190,21 @@ export async function createBooking(
       });
       const end = new Date(start.getTime() + quote.durationMin * 60_000);
       const customer = await resolveCustomer(actor, input.contact, tx);
+      if (rules.maxActiveBookingsPerCustomer > 0) {
+        const active = await tx.booking.count({
+          where: { customerId: customer.id, status: { in: [...ACTIVE_BOOKING_STATUSES] }, endsAt: { gt: now } },
+        });
+        if (active >= rules.maxActiveBookingsPerCustomer) {
+          throw new DomainError('CONFLICT', `You already have ${active} upcoming bookings. Please contact the team to book more sessions.`);
+        }
+      }
 
       return tx.booking.create({
         data: {
           reference,
           accessTokenHash: access.hash,
           brand: input.brand,
+          sourceSite: input.sourceSite ?? opts.sourceSite ?? null,
           customerId: customer.id,
           serviceId: quote.service.id,
           packageId: quote.pkg?.id ?? null,
@@ -271,6 +280,7 @@ export async function getBookingForViewer(reference: string, viewer: Viewer, db:
       paymentOrders: { orderBy: { createdAt: 'desc' } },
       transactions: { orderBy: { createdAt: 'desc' } },
       customer: true,
+      rescheduleRequests: { orderBy: { createdAt: 'desc' }, take: 5 },
     },
   });
   if (!booking) throw notFound('Booking');

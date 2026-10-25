@@ -13,8 +13,9 @@ export default function EnquiryDetailPage({ params }: { params: Promise<{ id: st
   const can = useCan();
   const { data: e, error, reload } = useAdminData<any>(`/api/v1/admin/enquiries/${id}`);
   const { data: staff } = useAdminData<any[]>('/api/v1/admin/staff');
-  const { data: catalog } = useAdminData<Catalog & { services: any[] }>('/api/v1/sites/EVENTS/catalog');
-  const { data: locations } = useAdminData<any[]>('/api/v1/sites/EVENTS/locations');
+  // Enquiries belong to one website (events, or photo/podcast briefs from the studio site).
+  const { data: catalog } = useAdminData<Catalog & { services: any[] }>(e ? `/api/v1/sites/${e.brand}/catalog` : null);
+  const { data: locations } = useAdminData<any[]>(e ? `/api/v1/sites/${e.brand}/locations` : null);
   const [msg, setMsg] = useState<{ tone: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<Line[]>([{ description: '', quantity: '1', unitPrice: '' }]);
@@ -56,7 +57,9 @@ export default function EnquiryDetailPage({ params }: { params: Promise<{ id: st
   const manage = can('enquiries.manage');
   const sent = e.quotations.find((q: any) => q.status === 'SENT');
   const accepted = e.quotations.find((q: any) => q.status === 'ACCEPTED');
-  const quoteServices = (catalog?.services ?? []).filter((s: any) => s.bookingMode === 'ENQUIRY');
+  const requested = new Set(e.services.map((x: any) => x.service.id));
+  const quoteServices = (catalog?.services ?? []).filter((s: any) => s.bookingMode === 'ENQUIRY' || requested.has(s.id));
+  const isEvent = e.brand === 'EVENTS';
   const convLocations = (locations ?? []).filter((l: any) => quoteServices.find((s: any) => s.id === convert.serviceId)?.locationIds.includes(l.id));
 
   return (
@@ -64,7 +67,7 @@ export default function EnquiryDetailPage({ params }: { params: Promise<{ id: st
       <div>
         <p className="small"><Link href="/enquiries">← Enquiries</Link></p>
         <h1 className="mono" style={{ marginBottom: 'var(--space-2)' }}>{e.reference}</h1>
-        <div className="cluster"><span className="badge">{e.status.replace('_', ' ').toLowerCase()}</span>{e.isDemo && <span className="badge badge--demo">Demo record</span>}{e.booking && <Link className="badge badge--success" href={`/bookings/${e.booking.id}`}>Booking {e.booking.reference}</Link>}</div>
+        <div className="cluster"><span className="badge">{e.brand.toLowerCase()}</span>{e.sourceSite === 'STUDIO' && <span className="badge badge--accent">via studio site</span>}<span className="badge">{e.status.replace('_', ' ').toLowerCase()}</span>{e.isDemo && <span className="badge badge--demo">Demo record</span>}{e.booking && <Link className="badge badge--success" href={`/bookings/${e.booking.id}`}>Booking {e.booking.reference}</Link>}</div>
       </div>
       {msg && <div className={`alert alert--${msg.tone}`} role="status">{msg.text}</div>}
       <div className="cols">
@@ -72,17 +75,23 @@ export default function EnquiryDetailPage({ params }: { params: Promise<{ id: st
           <section className="panel">
             <h2>Enquiry</h2>
             <dl className="dl">
-              <dt>Event</dt><dd>{e.eventType}{e.category ? ` · ${e.category.name}` : ''}</dd>
+              <dt>{isEvent ? 'Event' : 'Project'}</dt><dd>{e.eventType}{e.category ? ` · ${e.category.name}` : ''}</dd>
+              {e.companyName && (<><dt>Company</dt><dd>{e.companyName}</dd></>)}
               <dt>Preferred date</dt><dd>{formatCalendarDate(e.preferredDate.slice(0, 10))}</dd>
               {e.alternateDate && (<><dt>Alternate</dt><dd>{formatCalendarDate(e.alternateDate.slice(0, 10))}</dd></>)}
-              <dt>Guests</dt><dd>{e.expectedAttendance}</dd>
-              <dt>Venue</dt><dd>{e.location?.name ?? '—'}{e.venueDetails ? ` · ${e.venueDetails}` : ''}</dd>
+              <dt>{isEvent ? 'Guests' : 'People'}</dt><dd>{e.expectedAttendance}</dd>
+              {e.expectedDuration && (<><dt>Duration</dt><dd>{e.expectedDuration}</dd></>)}
+              {e.deliverables != null && (<><dt>Deliverables</dt><dd>{e.deliverables}</dd></>)}
+              <dt>{isEvent ? 'Venue' : 'Location'}</dt><dd>{e.location?.name ?? '—'}{e.venueDetails ? ` · ${e.venueDetails}` : ''}</dd>
               <dt>Services</dt><dd>{e.services.map((s: any) => s.service.name).join(', ') || '—'}</dd>
               <dt>Budget</dt><dd>{e.budgetMinMinor != null || e.budgetMaxMinor != null ? `${e.budgetMinMinor != null ? formatMoney(e.budgetMinMinor) : '…'} – ${e.budgetMaxMinor != null ? formatMoney(e.budgetMaxMinor) : '…'}` : 'Not given'}</dd>
               <dt>Set-up</dt><dd>{e.setupRequirements ?? '—'}</dd>
               <dt>Notes</dt><dd>{e.notes ?? '—'}</dd>
               <dt>Contact</dt><dd><Link href={`/customers/${e.customer.id}`}>{e.contactName}</Link> · {e.contactEmail}{e.contactPhone ? ` · ${e.contactPhone}` : ''}</dd>
               <dt>Received</dt><dd>{formatDateTime(e.createdAt, 'Asia/Kolkata')}</dd>
+              {e.attachments?.length > 0 && (<><dt>Attachments</dt><dd><ul style={{ margin: 0, paddingLeft: '1.1em' }}>{e.attachments.map((a: any) => (
+                <li key={a.id}><a href={`/api/v1/admin/attachments/${a.id}`} download>{a.fileName}</a> <span className="small muted">({Math.max(1, Math.round(a.sizeBytes / 1024))} KB · {a.mimeType})</span></li>
+              ))}</ul><p className="small muted" style={{ margin: 0 }}>Customer uploads. Files are type-checked on upload; open them with care.</p></dd></>)}
             </dl>
           </section>
 

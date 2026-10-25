@@ -38,6 +38,13 @@ export const serviceInputSchema = z
     locationIds: z.array(z.string()).default([]),
     resourceIds: z.array(z.string()).default([]),
     addOnIds: z.array(z.string()).default([]),
+    // Studio-site fields are optional so older clients that don't send them leave them untouched.
+    discoveryCategoryIds: z.array(z.string()).optional(),
+    equipmentIds: z.array(z.string()).optional(),
+    galleryImageKeys: z.array(text(120).min(1)).max(12).optional(),
+    preparation: text(3000).optional().nullable(),
+    depositBpsOverride: z.coerce.number().int().min(0).max(10_000).optional().nullable(),
+    isFeatured: z.boolean().optional(),
   })
   .refine((s) => s.maxDurationMin >= s.minDurationMin, { message: 'Maximum duration must be at least the minimum', path: ['maxDurationMin'] })
   .refine((s) => s.defaultDurationMin >= s.minDurationMin && s.defaultDurationMin <= s.maxDurationMin, { message: 'Default duration must be within the min/max range', path: ['defaultDurationMin'] })
@@ -132,6 +139,8 @@ export const portfolioInputSchema = z.object({
   slug,
   title: text(160).min(2),
   categoryId: optionalId,
+  videoUrl: z.string().trim().max(500).refine((v) => (v.startsWith('/') && !v.startsWith('//')) || /^https:\/\//.test(v), 'Use a /media path or an https:// URL').optional().nullable().or(z.literal('').transform(() => null)),
+  clientCredit: text(160).optional().nullable(),
   summary: text(500).min(2),
   body: text(10_000).min(2),
   coverImage: text(120).min(1),
@@ -157,7 +166,7 @@ async function audit(actor: Actor, action: string, entityType: string, entityId:
 
 export async function upsertService(id: string | null, raw: unknown, actor: Actor, ctx: RequestContext = {}, db = prisma) {
   const input = serviceInputSchema.parse(raw);
-  const { locationIds, resourceIds, addOnIds, ...data } = input;
+  const { locationIds, resourceIds, addOnIds, discoveryCategoryIds, equipmentIds, ...data } = input;
   if (data.categoryId) {
     const cat = await db.category.findUnique({ where: { id: data.categoryId } });
     if (!cat || cat.brand !== data.brand) throw invalid('Category belongs to a different website.');
@@ -178,6 +187,14 @@ export async function upsertService(id: string | null, raw: unknown, actor: Acto
     await tx.serviceLocation.deleteMany({ where: { serviceId: service.id } });
     await tx.serviceResource.deleteMany({ where: { serviceId: service.id } });
     await tx.serviceAddOn.deleteMany({ where: { serviceId: service.id } });
+    if (discoveryCategoryIds) {
+      await tx.serviceDiscoveryCategory.deleteMany({ where: { serviceId: service.id } });
+      if (discoveryCategoryIds.length) await tx.serviceDiscoveryCategory.createMany({ data: discoveryCategoryIds.map((categoryId) => ({ serviceId: service.id, categoryId })) });
+    }
+    if (equipmentIds) {
+      await tx.serviceEquipment.deleteMany({ where: { serviceId: service.id } });
+      if (equipmentIds.length) await tx.serviceEquipment.createMany({ data: equipmentIds.map((equipmentId) => ({ serviceId: service.id, equipmentId })) });
+    }
     if (locationIds.length) await tx.serviceLocation.createMany({ data: locationIds.map((locationId) => ({ serviceId: service.id, locationId })) });
     if (resourceIds.length) await tx.serviceResource.createMany({ data: resourceIds.map((resourceId) => ({ serviceId: service.id, resourceId })) });
     if (addOnIds.length) await tx.serviceAddOn.createMany({ data: addOnIds.map((addOnId) => ({ serviceId: service.id, addOnId })) });

@@ -36,7 +36,11 @@ export function StatusBadge({ status, label }: { status: string; label: string }
   return <span className={`badge ${tone ? `badge--${tone}` : ''}`}>{label}</span>;
 }
 
-export function BookingStatusView({ site, brandSites, initialRef, initialToken, isNew, signedIn }: {
+export function BookingStatusView({ site, brandSites, initialRef, initialToken, isNew, signedIn, homeBrands, showReceipt }: {
+  /** Brands whose bookings this site can show (defaults to the site's own brand). */
+  homeBrands?: Brand[];
+  /** Show a link to the printable receipt page (/receipt/[ref]). */
+  showReceipt?: boolean;
   site: SiteConfig;
   brandSites: Record<Brand, string>;
   initialRef?: string;
@@ -87,7 +91,7 @@ export function BookingStatusView({ site, brandSites, initialRef, initialToken, 
     return <p className="muted"><span className="spinner" aria-hidden="true" /> Loading your booking…</p>;
   }
   if (booking) {
-    return <BookingDetail booking={booking} setBooking={setBooking} token={token} site={site} brandSites={brandSites} isNew={isNew} refresh={refresh} />;
+    return <BookingDetail booking={booking} setBooking={setBooking} token={token} site={site} brandSites={brandSites} isNew={isNew} refresh={refresh} homeBrands={homeBrands ?? [site.brand]} showReceipt={!!showReceipt} />;
   }
   return <LookupForm initialRef={ref} onRef={setRef} loadError={loadError} />;
 }
@@ -143,7 +147,9 @@ function LookupForm({ initialRef, onRef, loadError }: { initialRef: string; onRe
   );
 }
 
-function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, refresh }: {
+function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, refresh, homeBrands, showReceipt }: {
+  homeBrands: Brand[];
+  showReceipt: boolean;
   booking: BookingDto;
   setBooking: (b: BookingDto) => void;
   token: string | null;
@@ -153,7 +159,7 @@ function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, re
   refresh: () => Promise<void>;
 }) {
   const tz = booking.timezone;
-  const otherSite = booking.brand !== site.brand;
+  const otherSite = !homeBrands.includes(booking.brand);
   const headers: Record<string, string> = token ? { 'X-Booking-Token': token } : {};
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -250,6 +256,14 @@ function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, re
             ))}
           </ol>
         </section>
+
+        {showReceipt && booking.payments.length > 0 && (
+          <p><a className="link-arrow" href={`/receipt/${booking.reference}`}>View receipt</a></p>
+        )}
+
+        {(booking.rescheduleRequests?.length || booking.actions.canRequestReschedule) && (
+          <RescheduleSection booking={booking} headers={headers} onDone={refresh} />
+        )}
 
         {(booking.actions.canCancel || booking.actions.canRequestCancellation) && (
           <section className="card card--surface" aria-labelledby="cancel-h">
@@ -431,6 +445,61 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
             <button type="button" className="btn btn--ghost" onClick={() => setDemo(null)} disabled={busy}>Cancel</button>
           </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function RescheduleSection({ booking, headers, onDone }: { booking: BookingDto; headers: Record<string, string>; onDone: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [reason, setReason] = useState('');
+  const [msg, setMsg] = useState<{ tone: string; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pending = booking.rescheduleRequests?.find((r) => r.status === 'PENDING');
+  const last = booking.rescheduleRequests?.[0];
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const res = await api(`/api/v1/bookings/${booking.reference}/reschedule-requests`, { body: { date, startTime: time, reason: reason || undefined }, headers });
+    setBusy(false);
+    if (res.ok) {
+      setMsg({ tone: 'success', text: 'Request sent. Your current time stays reserved until the team confirms the change.' });
+      setOpen(false);
+      await onDone();
+    } else setMsg({ tone: 'danger', text: res.error.message });
+  }
+
+  return (
+    <section className="card card--surface" aria-labelledby="resched-h">
+      <h3 id="resched-h">Change the date or time</h3>
+      {msg && <div className={`alert alert--${msg.tone}`} role="status" style={{ marginBottom: 'var(--space-3)' }}>{msg.text}</div>}
+      {pending ? (
+        <p className="small">Request pending: <strong>{formatDateTime(pending.requestedStart, booking.timezone)}</strong>. Your current time stays reserved until the team confirms.</p>
+      ) : last && last.status !== 'PENDING' ? (
+        <p className="small muted">Last request {last.status.toLowerCase()}{last.decisionNote ? `: ${last.decisionNote}` : ''}.</p>
+      ) : null}
+      {booking.actions.canRequestReschedule && !open && (
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen(true)}>Request a new time</button>
+      )}
+      {open && (
+        <form className="stack" onSubmit={submit}>
+          <div className="form-row form-row--2">
+            <TextField id="rs-date" label="New date" type="date" value={date} onChange={setDate} required />
+            <TextField id="rs-time" label={`Start time (${booking.timezone})`} type="time" value={time} onChange={setTime} required />
+          </div>
+          <div className="field">
+            <label htmlFor="rs-reason">Reason (optional)</label>
+            <textarea id="rs-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>We check the new time is free before sending your request. The team confirms the change.</p>
+          <div className="cluster">
+            <button className="btn btn--sm" type="submit" disabled={busy || !date || !time}>{busy ? 'Checking…' : 'Send request'}</button>
+            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setOpen(false)}>Cancel</button>
+          </div>
+        </form>
       )}
     </section>
   );

@@ -14,6 +14,10 @@ export default function ServicesPage() {
   const { data, error, reload } = useAdminData<any>(`/api/v1/admin/catalog?brand=${brand}`);
   const { data: locations } = useAdminData<any[]>('/api/v1/admin/locations');
   const { data: media } = useAdminData<any[]>('/api/v1/admin/media');
+  const { data: discovery } = useAdminData<any[]>('/api/v1/admin/discovery-categories');
+  const { data: equipment } = useAdminData<any[]>('/api/v1/admin/equipment');
+  // null when this staff member can't read the list; those fields are then left untouched on save.
+  const studio = { discovery: discovery ?? null, equipment: equipment ?? null };
   const [editing, setEditing] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: string; text: string } | null>(null);
   const manage = can('catalog.manage');
@@ -37,12 +41,12 @@ export default function ServicesPage() {
         <>
           <section className="panel">
             <div className="cluster" style={{ justifyContent: 'space-between' }}><h2 style={{ margin: 0 }}>Services</h2>{manage && <button className="btn btn--sm" onClick={() => setEditing('new')}>New service</button>}</div>
-            {editing === 'new' && <ServiceForm brand={brand} categories={data.categories} addOns={data.addOns} locations={locations ?? []} media={media ?? []} onSubmit={(b: object) => save('/api/v1/admin/services', 'POST', b, 'Service created.')} onCancel={() => setEditing(null)} />}
+            {editing === 'new' && <ServiceForm brand={brand} categories={data.categories} addOns={data.addOns} locations={locations ?? []} media={media ?? []} studio={studio} onSubmit={(b: object) => save('/api/v1/admin/services', 'POST', b, 'Service created.')} onCancel={() => setEditing(null)} />}
             <div className="table-wrap"><table className="table">
               <thead><tr><th>Service</th><th>Mode</th><th>Pricing</th><th>Packages</th><th>Bookings</th><th>Status</th><th /></tr></thead>
               <tbody>{data.services.map((s: any) => (
                 <ServiceRow key={s.id} s={s} manage={manage} editing={editing === s.id} onEdit={() => setEditing(editing === s.id ? null : s.id)}>
-                  <ServiceForm brand={brand} initial={s} categories={data.categories} addOns={data.addOns} locations={locations ?? []} media={media ?? []} onSubmit={(b: object) => save(`/api/v1/admin/services/${s.id}`, 'PUT', b, 'Service updated.')} onCancel={() => setEditing(null)} />
+                  <ServiceForm brand={brand} initial={s} categories={data.categories} addOns={data.addOns} locations={locations ?? []} media={media ?? []} studio={studio} onSubmit={(b: object) => save(`/api/v1/admin/services/${s.id}`, 'PUT', b, 'Service updated.')} onCancel={() => setEditing(null)} />
                   <Packages service={s} manage={manage} save={save} />
                 </ServiceRow>
               ))}</tbody>
@@ -85,9 +89,9 @@ function ServiceRow({ s, manage, editing, onEdit, children }: { s: any; manage: 
   );
 }
 
-function ServiceForm({ brand, initial, categories, addOns, locations, media, onSubmit, onCancel }: any) {
-  const s = initial ?? { bookingMode: 'DIRECT', pricingModel: 'FIXED', basePriceMinor: 0, hourlyRateMinor: 0, minDurationMin: 60, maxDurationMin: 240, durationStepMin: 30, defaultDurationMin: 60, bufferMin: 15, slotIntervalMin: 30, requiresResource: true, isActive: true, sortOrder: 0, locationIds: [], resourceIds: [], addOnIds: [] };
-  const [f, setF] = useState<any>({ ...s, basePrice: String(s.basePriceMinor / 100), hourlyRate: String(s.hourlyRateMinor / 100), name: s.name ?? '', slug: s.slug ?? '', summary: s.summary ?? '', description: s.description ?? '', categoryId: s.categoryId ?? '', imageKey: s.imageKey ?? '' });
+function ServiceForm({ brand, initial, categories, addOns, locations, media, studio, onSubmit, onCancel }: any) {
+  const s = initial ?? { bookingMode: 'DIRECT', pricingModel: 'FIXED', basePriceMinor: 0, hourlyRateMinor: 0, minDurationMin: 60, maxDurationMin: 240, durationStepMin: 30, defaultDurationMin: 60, bufferMin: 15, slotIntervalMin: 30, requiresResource: true, isActive: true, sortOrder: 0, locationIds: [], resourceIds: [], addOnIds: [], discoveryCategoryIds: [], equipmentIds: [], galleryImageKeys: [], isFeatured: false, preparation: '', depositBpsOverride: null };
+  const [f, setF] = useState<any>({ ...s, basePrice: String(s.basePriceMinor / 100), hourlyRate: String(s.hourlyRateMinor / 100), name: s.name ?? '', slug: s.slug ?? '', summary: s.summary ?? '', description: s.description ?? '', categoryId: s.categoryId ?? '', imageKey: s.imageKey ?? '', preparation: s.preparation ?? '', depositPct: s.depositBpsOverride == null ? '' : String(s.depositBpsOverride / 100), discoveryCategoryIds: s.discoveryCategoryIds ?? [], equipmentIds: s.equipmentIds ?? [], galleryImageKeys: s.galleryImageKeys ?? [], isFeatured: !!s.isFeatured });
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const toggle = (k: string, id: string) => setF({ ...f, [k]: f[k].includes(id) ? f[k].filter((x: string) => x !== id) : [...f[k], id] });
   const brandLocations = locations.filter((l: any) => l.brands.includes(brand));
@@ -98,7 +102,9 @@ function ServiceForm({ brand, initial, categories, addOns, locations, media, onS
       bookingMode: f.bookingMode, pricingModel: f.pricingModel, basePriceMinor: toMinor(f.basePrice), hourlyRateMinor: toMinor(f.hourlyRate),
       minDurationMin: Number(f.minDurationMin), maxDurationMin: Number(f.maxDurationMin), durationStepMin: Number(f.durationStepMin), defaultDurationMin: Number(f.defaultDurationMin),
       bufferMin: Number(f.bufferMin), slotIntervalMin: Number(f.slotIntervalMin), requiresResource: f.requiresResource, imageKey: f.imageKey || null, isActive: f.isActive,
-      sortOrder: Number(f.sortOrder || 0), locationIds: f.locationIds, resourceIds: f.resourceIds.filter((r: string) => brandLocations.some((l: any) => f.locationIds.includes(l.id) && l.resources.some((x: any) => x.id === r))), addOnIds: f.addOnIds,
+      sortOrder: Number(f.sortOrder || 0), locationIds: f.locationIds,
+      ...(studio.discovery ? { discoveryCategoryIds: f.discoveryCategoryIds } : {}), ...(studio.equipment ? { equipmentIds: f.equipmentIds } : {}), galleryImageKeys: f.galleryImageKeys, isFeatured: f.isFeatured,
+      preparation: f.preparation || null, depositBpsOverride: f.depositPct === '' ? null : Math.round(Number(f.depositPct) * 100), resourceIds: f.resourceIds.filter((r: string) => brandLocations.some((l: any) => f.locationIds.includes(l.id) && l.resources.some((x: any) => x.id === r))), addOnIds: f.addOnIds,
       ...(initial?.isDemo ? { isDemo: f.isDemo } : {}),
     });
   }
@@ -136,6 +142,21 @@ function ServiceForm({ brand, initial, categories, addOns, locations, media, onS
           </div>
         ))}
       </fieldset>
+      {brand !== 'EVENTS' && (
+        <fieldset className="panel" style={{ padding: 'var(--space-4)' }}><legend className="label">Studio site (Infinity Studios)</legend>
+          <label className="checkbox"><input type="checkbox" checked={f.isFeatured} onChange={set('isFeatured')} /><span>Show in &ldquo;Featured services&rdquo;</span></label>
+          {studio.discovery && <><p className="small muted" style={{ margin: 'var(--space-2) 0' }}>Browse categories</p>
+          <div className="cluster">{studio.discovery.map((c: any) => <label key={c.id} className="checkbox small"><input type="checkbox" checked={f.discoveryCategoryIds.includes(c.id)} onChange={() => toggle('discoveryCategoryIds', c.id)} /><span>{c.name}</span></label>)}</div></>}
+          {studio.equipment && <><p className="small muted" style={{ margin: 'var(--space-2) 0' }}>Equipment &amp; facilities</p>
+          <div className="cluster">{studio.equipment.map((e: any) => <label key={e.id} className="checkbox small"><input type="checkbox" checked={f.equipmentIds.includes(e.id)} onChange={() => toggle('equipmentIds', e.id)} /><span>{e.name}</span></label>)}</div></>}
+          <p className="small muted" style={{ margin: 'var(--space-2) 0' }}>Gallery images (in addition to the main image, max 12)</p>
+          <div className="cluster">{media.map((m: any) => <label key={m.key} className="checkbox small"><input type="checkbox" checked={f.galleryImageKeys.includes(m.key)} onChange={() => toggle('galleryImageKeys', m.key)} /><span>{m.key}</span></label>)}</div>
+          <div className="form-row form-row--2" style={{ marginTop: 'var(--space-3)' }}>
+            <div className="field"><label htmlFor="s-dep">Deposit for this service (%)</label><input id="s-dep" className="input" inputMode="decimal" value={f.depositPct} onChange={set('depositPct')} placeholder="Blank = site default" /><p className="hint">0 = pay later, 100 = full payment online.</p></div>
+            <div className="field"><label htmlFor="s-prep">Preparation notes for customers</label><textarea id="s-prep" className="textarea" value={f.preparation} onChange={set('preparation')} /></div>
+          </div>
+        </fieldset>
+      )}
       <fieldset><legend className="label">Add-ons</legend><div className="cluster">{addOns.map((a: any) => <label key={a.id} className="checkbox small"><input type="checkbox" checked={f.addOnIds.includes(a.id)} onChange={() => toggle('addOnIds', a.id)} /><span>{a.name}</span></label>)}</div></fieldset>
       <div className="cluster"><button className="btn" type="submit">Save service</button><button type="button" className="btn btn--ghost" onClick={onCancel}>Cancel</button></div>
     </form>

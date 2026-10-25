@@ -2,7 +2,9 @@
 // (progressive client-side feedback). Only depends on zod.
 import { z } from 'zod';
 
-export const brandSchema = z.enum(['PHOTO', 'PODCAST', 'EVENTS']);
+export const brandSchema = z.enum(['PHOTO', 'PODCAST', 'EVENTS', 'STUDIO']);
+/** Brands that own bookable services. */
+export const serviceBrandSchema = z.enum(['PHOTO', 'PODCAST', 'EVENTS']);
 export type BrandValue = z.infer<typeof brandSchema>;
 
 const id = z.string().min(1).max(64);
@@ -41,7 +43,7 @@ export const availabilityQuerySchema = z.object({
 });
 
 export const createBookingSchema = z.object({
-  brand: brandSchema,
+  brand: serviceBrandSchema,
   serviceId: id,
   packageId: id.optional().nullable(),
   addOnIds: z.array(id).max(20).default([]),
@@ -53,6 +55,8 @@ export const createBookingSchema = z.object({
   contact: contactSchema,
   notes: trimmed(2000).optional(),
   acceptTerms: z.literal(true, { message: 'Please accept the booking terms' }),
+  /** Website the booking is made on, when it differs from the service's own site. */
+  sourceSite: z.enum(['STUDIO']).optional(),
 });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
@@ -75,6 +79,9 @@ export const createEnquirySchema = z
     budgetMaxMinor: z.coerce.number().int().min(0).optional().nullable(),
     setupRequirements: trimmed(3000).optional(),
     notes: trimmed(3000).optional(),
+    companyName: trimmed(160).optional(),
+    expectedDuration: trimmed(120).optional(),
+    deliverables: z.coerce.number().int().min(0).max(100_000).optional().nullable(),
     contact: contactSchema,
     acceptTerms: z.literal(true, { message: 'Please confirm you have read the privacy notice' }),
   })
@@ -98,6 +105,34 @@ export const profileUpdateSchema = z.object({
   phone: phoneSchema.optional().nullable().or(z.literal('').transform(() => null)),
   company: trimmed(120).optional().nullable(),
   marketingOptIn: z.boolean().optional(),
+});
+
+export const notificationPreferencesSchema = z.object({
+  notifyEmail: z.boolean(),
+  notifyWhatsapp: z.boolean(),
+  /** Must be true to enable WhatsApp; recorded with a timestamp as consent. */
+  whatsappConsent: z.boolean().optional(),
+});
+
+export const rescheduleRequestSchema = z.object({
+  date: dateString,
+  startTime: timeString,
+  reason: trimmed(500).optional(),
+});
+
+export const studioListingQuerySchema = z.object({
+  category: z.string().max(80).optional(),
+  q: z.string().trim().max(100).optional(),
+  minPrice: z.coerce.number().int().min(0).optional(),
+  maxPrice: z.coerce.number().int().min(0).optional(),
+  maxDuration: z.coerce.number().int().min(15).max(1440).optional(),
+  city: z.string().max(80).optional(),
+  equipment: z.string().max(64).optional(),
+  type: z.enum(['package', 'hourly', 'fixed', 'quote']).optional(),
+  date: dateString.optional(),
+  sort: z.enum(['popular', 'price_asc', 'price_desc', 'duration', 'name']).default('popular'),
+  page: z.coerce.number().int().min(1).max(500).default(1),
+  pageSize: z.coerce.number().int().min(1).max(48).default(12),
 });
 
 export const paymentStartSchema = z.object({

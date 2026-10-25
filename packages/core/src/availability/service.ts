@@ -3,7 +3,7 @@ import { DomainError, invalid, notFound } from '../errors';
 import { getSetting } from '../settings';
 import { addDays, parseLocalDate, todayIn, type LocalDate, zonedToUtc } from '../time';
 import { ACTIVE_BOOKING_STATUSES } from '../booking/status';
-import { computeAvailability, type AvailabilityRules, type DayAvailability, type Interval, type ResourceSchedule, type WeeklyHours } from './engine';
+import { computeAvailability, windowFitsResource, type AvailabilityRules, type DayAvailability, type Interval, type ResourceSchedule, type WeeklyHours } from './engine';
 import { resolveDuration } from '../pricing/service';
 
 export interface AvailabilityContext {
@@ -165,4 +165,24 @@ export async function getAvailability(q: AvailabilityQuery, db: Db = prisma, now
     isDemoAvailability: rulesCfg.isDemoAvailability,
     days: computeAvailability(date as LocalDate, days, ctx.rules, ctx.locationHours, ctx.locationBlocks, ctx.resources),
   };
+}
+
+/**
+ * Whether a specific start time is currently bookable for a service at a
+ * location (a read-only check; reservation still re-verifies under locks).
+ */
+export async function isSlotBookable(
+  p: { serviceId: string; locationId: string; durationMin: number; date: LocalDate; startMinute: number; excludeBookingId?: string; now?: Date },
+  db: Db = prisma,
+): Promise<boolean> {
+  const location = await db.location.findUnique({ where: { id: p.locationId } });
+  if (!location) return false;
+  const start = zonedToUtc(p.date, p.startMinute, location.timezone);
+  const ctx = await loadAvailabilityContext(
+    { serviceId: p.serviceId, locationId: p.locationId, durationMin: p.durationMin, from: new Date(start.getTime() - 86_400_000), to: new Date(start.getTime() + (p.durationMin + 1440) * 60_000), excludeBookingId: p.excludeBookingId, now: p.now },
+    db,
+  );
+  if (start < ctx.rules.earliestStart) return false;
+  if (!ctx.service.requiresResource) return windowFitsResource(p.date, p.startMinute, ctx.rules, ctx.locationHours, ctx.locationBlocks, null);
+  return ctx.resources.some((r) => windowFitsResource(p.date, p.startMinute, ctx.rules, ctx.locationHours, ctx.locationBlocks, r));
 }

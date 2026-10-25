@@ -89,7 +89,7 @@ export async function quoteService(req: QuoteRequest, db: Db = prisma): Promise<
     taxRateBps: pricing.taxRateBps,
     taxLabel: pricing.taxLabel,
     fees: pricing.fees,
-    depositBps: pricing.depositBps,
+    depositBps: service.depositBpsOverride ?? pricing.depositBps,
     minimumDepositMinor: pricing.minimumDepositMinor,
   });
 

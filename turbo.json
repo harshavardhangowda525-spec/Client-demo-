@@ -22,11 +22,17 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "RATE_LIMIT_PER_MINUTE"
+      ]
     },
     "start": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "RATE_LIMIT_PER_MINUTE"
+      ]
     }
   }
 }

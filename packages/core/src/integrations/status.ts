@@ -193,5 +193,6 @@ export function publicIntegrationFlags() {
     paymentsSimulated: env.PAYMENTS_MODE === 'demo',
     mapsEmbedKey: env.GOOGLE_MAPS_EMBED_API_KEY ?? null,
     emailDelivery: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
+    whatsappDelivery: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM),
   };
 }

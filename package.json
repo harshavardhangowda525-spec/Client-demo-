@@ -16,7 +16,7 @@
     "db:generate": "pnpm --filter @studio/db generate",
     "db:migrate": "pnpm --filter @studio/db migrate:deploy",
     "db:migrate:dev": "pnpm --filter @studio/db migrate:dev",
-    "db:seed": "pnpm --filter @studio/db seed",
+    "db:seed": "pnpm --filter @studio/core seed",
     "db:reset": "pnpm --filter @studio/db reset",
     "images:fetch": "node scripts/fetch-demo-images.mjs",
     "start": "turbo run start --concurrency 20"

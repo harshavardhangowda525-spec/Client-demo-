@@ -1,5 +1,10 @@
 # One-click demo deployment on Render (render.com → New + → Blueprint).
-# Creates: PostgreSQL + API + three websites + admin panel.
+# Creates: PostgreSQL + API + four websites (incl. the Infinity Studios platform) + admin panel.
+#
+# Note: the free plan has no persistent disk, so files customers attach to
+# quotation briefs are lost when the API restarts or redeploys. Fine for a demo;
+# use a paid plan with a disk (set UPLOAD_DIR to its mount path) or object
+# storage before real use.
 #
 # Public URLs are https://<service name>.onrender.com. If Render reports a name
 # as taken and appends a suffix, update the URLs in the "infinity-demo-urls"
@@ -21,6 +26,8 @@ envVarGroups:
         value: https://infinity-demo-podcast.onrender.com
       - key: SITE_URL_EVENTS
         value: https://infinity-demo-events.onrender.com
+      - key: SITE_URL_STUDIO
+        value: https://infinity-demo-studio.onrender.com
       - key: SITE_URL_ADMIN
         value: https://infinity-demo-admin.onrender.com
       - key: API_INTERNAL_URL
@@ -86,6 +93,16 @@ services:
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-events exec next build
     startCommand: cd apps/web-events && ./node_modules/.bin/next start -p $PORT
+    envVars:
+      - fromGroup: infinity-demo-urls
+
+  - type: web
+    name: infinity-demo-studio
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-studio exec next build
+    startCommand: cd apps/web-studio && ./node_modules/.bin/next start -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls
 

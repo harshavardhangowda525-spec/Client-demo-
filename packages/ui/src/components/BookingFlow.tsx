@@ -22,7 +22,9 @@ export interface BookingFlowProps {
   services: PublicService[];
   locations: PublicLocation[];
   me: Me | null;
-  initial?: { service?: string; location?: string; date?: string; time?: string; package?: string };
+  initial?: { service?: string; location?: string; date?: string; time?: string; package?: string; duration?: string; addOns?: string[]; step?: number };
+  /** Set when the booking is made on a site other than the service's own (e.g. the studio platform). */
+  sourceSite?: 'STUDIO';
   labels?: { location?: string; attendees?: string; notesPlaceholder?: string };
   showAttendees?: boolean;
 }
@@ -34,18 +36,21 @@ function todayIn(tz: string) {
   return parts; // YYYY-MM-DD
 }
 
-export function BookingFlow({ brand, site, services, locations, me, initial = {}, labels = {}, showAttendees }: BookingFlowProps) {
+export function BookingFlow({ brand, site, services, locations, me, initial = {}, labels = {}, showAttendees, sourceSite }: BookingFlowProps) {
   const router = useRouter();
   const tz = site.regional.timezone;
   const today = todayIn(tz);
   const initialService = services.find((s) => s.slug === initial.service || s.id === initial.service) ?? null;
 
-  const [step, setStep] = useState(initialService ? 0 : 0);
+  // Deep links from a service page can start at the details step once a slot is chosen.
+  const [step, setStep] = useState(initialService && initial.date && initial.time && initial.step ? Math.min(Math.max(initial.step, 0), 2) : 0);
   const [serviceId, setServiceId] = useState<string | null>(initialService?.id ?? null);
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [services, serviceId]);
-  const [packageId, setPackageId] = useState<string | null>(() => initialService?.packages.find((p) => p.id === initial.package || p.isFeatured)?.id ?? initialService?.packages[0]?.id ?? null);
-  const [durationMin, setDurationMin] = useState<number | null>(initialService?.defaultDurationMin ?? null);
-  const [addOnIds, setAddOnIds] = useState<string[]>([]);
+  const [packageId, setPackageId] = useState<string | null>(
+    () => (initialService?.packages.find((p) => p.id === initial.package) ?? initialService?.packages.find((p) => p.isFeatured) ?? initialService?.packages[0])?.id ?? null,
+  );
+  const [durationMin, setDurationMin] = useState<number | null>(initial.duration && /^\d+$/.test(initial.duration) ? Number(initial.duration) : (initialService?.defaultDurationMin ?? null));
+  const [addOnIds, setAddOnIds] = useState<string[]>(() => (initial.addOns ?? []).filter((id) => initialService?.addOns.some((a) => a.id === id)));
   const serviceLocations = useMemo(() => locations.filter((l) => service?.locationIds.includes(l.id)), [locations, service]);
   const [locationId, setLocationId] = useState<string | null>(initial.location ?? null);
   const [month, setMonth] = useState((initial.date ?? today).slice(0, 7));
@@ -190,7 +195,8 @@ export function BookingFlow({ brand, site, services, locations, me, initial = {}
     setSubmitError(null);
     const res = await api<{ booking: BookingDto; accessToken: string }>('/api/v1/bookings', {
       body: {
-        brand,
+        brand: (service as { brand?: string }).brand ?? brand,
+        sourceSite,
         serviceId: service.id,
         packageId: selectedPackage?.id ?? null,
         addOnIds,

@@ -22,6 +22,8 @@ export const DEMO_USERS = [
 ];
 
 const TABLES = [
+  'RescheduleRequest', 'EnquiryAttachment', 'SavedService', 'NotificationTemplate', 'ContentPage', 'Testimonial', 'HomeBanner',
+  'ServiceEquipment', 'Equipment', 'ServiceDiscoveryCategory', 'DiscoveryCategory',
   'AuditLog', 'IntegrationCheck', 'Setting', 'ContactMessage', 'Faq', 'PortfolioImage', 'PortfolioProject',
   'Notification', 'WebhookEvent', 'Refund', 'Transaction', 'PaymentOrder', 'QuotationLine', 'Quotation',
   'EnquiryFollowUp', 'EnquiryService', 'BookingNote', 'BookingStatusHistory', 'BookingItem', 'Booking',
@@ -119,6 +121,9 @@ export async function seedDemo(opts: { force?: boolean; withSampleActivity?: boo
         imageKey: s.imageKey,
         sortOrder: i,
         isDemo: true,
+        isFeatured: data.featuredServices.includes(s.key),
+        preparation: data.servicePreparation[s.key] ?? null,
+        galleryImageKeys: data.serviceGallery[s.key] ?? [],
         locations: { create: s.locations.map((k) => ({ locationId: locationIds[k]! })) },
         resources: { create: s.resources.map((k) => ({ resourceId: resourceIds[k]! })) },
         addOns: { create: s.addOns.map((k) => ({ addOnId: addOnIds[k]! })) },
@@ -127,6 +132,28 @@ export async function seedDemo(opts: { force?: boolean; withSampleActivity?: boo
     });
     serviceIds[s.key] = row.id;
   }
+
+  // Studio discovery platform: categories, equipment, banners, policy pages
+  const discoveryIds: Record<string, string> = {};
+  for (const [i, c] of data.discoveryCategories.entries()) {
+    discoveryIds[c.slug] = (await prisma.discoveryCategory.create({ data: { ...c, sortOrder: i, isDemo: true } })).id;
+  }
+  for (const [key, slugs] of Object.entries(data.serviceDiscovery)) {
+    if (!serviceIds[key]) continue;
+    await prisma.serviceDiscoveryCategory.createMany({ data: slugs.map((slug) => ({ serviceId: serviceIds[key]!, categoryId: discoveryIds[slug]! })) });
+  }
+  for (const [i, e] of data.equipment.entries()) {
+    const row = await prisma.equipment.create({
+      data: { name: e.name, category: e.category, imageKey: e.imageKey, description: 'Sample facility. Details and specifications to be confirmed by the studio.', isVerified: false, sortOrder: i },
+    });
+    const links = e.services.filter((k) => serviceIds[k]).map((k) => ({ serviceId: serviceIds[k]!, equipmentId: row.id }));
+    if (links.length) await prisma.serviceEquipment.createMany({ data: links });
+  }
+  const catalogImages = imageCatalog.images as Record<string, { alt: string }>;
+  for (const [i, b] of data.banners.entries()) {
+    await prisma.homeBanner.create({ data: { ...b, imageAlt: catalogImages[b.imageKey]?.alt ?? b.title, sortOrder: i } });
+  }
+  for (const p of data.contentPages) await prisma.contentPage.create({ data: { ...p, isTemplate: true } });
 
   // Content
   const images = imageCatalog.images as Record<string, { alt: string }>;
@@ -261,12 +288,20 @@ const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].repla
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
   (ifEmpty
-    ? prisma.user.count().then((n) => {
-        if (n > 0) {
+    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.booking.count({ where: { isDemo: false } })]).then(([users, studio, real]) => {
+        const skip = { users: [] as { email: string; role: string; password: string }[] };
+        if (users === 0) return seedDemo({ force: process.argv.includes('--force') });
+        if (studio > 0) {
           console.info('Database already has data: skipping demo seed (--if-empty).');
-          return { users: [] as { email: string; role: string; password: string }[] };
+          return skip;
         }
-        return seedDemo({ force: process.argv.includes('--force') });
+        // A demo database created before the studio platform existed: reload the full demo data set.
+        if (real > 0) {
+          console.warn('Studio content is missing, but the database holds non-demo bookings, so it was not reseeded. Add studio content in the admin panel (Studio site).');
+          return skip;
+        }
+        console.info('Demo database predates the studio platform: reloading demo data (--if-empty).');
+        return seedDemo();
       })
     : seedDemo({ force: process.argv.includes('--force') }))
     .then((r) => {

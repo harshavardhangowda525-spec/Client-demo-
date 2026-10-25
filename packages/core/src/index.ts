@@ -25,3 +25,8 @@ export * from './integrations/status';
 export * from './catalog/public';
 export * from './catalog/admin';
 export * from './admin/queries';
+export * from './booking/reschedule-requests';
+export * from './enquiry/attachments';
+export * from './studio/catalog';
+export * from './studio/customer';
+export * from './studio/admin';

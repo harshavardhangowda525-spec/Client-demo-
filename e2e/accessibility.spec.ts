@@ -8,6 +8,8 @@ const PAGES: [string, string][] = [
   [SITES.photo, '/'], [SITES.photo, '/book'], [SITES.photo, '/portfolio'], [SITES.photo, '/booking-status'],
   [SITES.podcast, '/'], [SITES.podcast, '/availability'], [SITES.podcast, '/facilities'],
   [SITES.events, '/'], [SITES.events, '/enquire'], [SITES.events, '/packages'],
+  [SITES.studio, '/'], [SITES.studio, '/services/photography'], [SITES.studio, '/service/video-podcast-recording'], [SITES.studio, '/search?q=studio'],
+  [SITES.studio, '/enquire'], [SITES.studio, '/portfolio'], [SITES.studio, '/studio'], [SITES.studio, '/packages'], [SITES.studio, '/account'],
   [SITES.admin, '/'],
 ];
 

@@ -6,6 +6,7 @@ import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
 import { fromNodeHeaders } from 'better-auth/node';
 import { prisma } from '@studio/db';
@@ -17,6 +18,8 @@ import { registerPublicRoutes } from './routes/public';
 import { registerCustomerRoutes } from './routes/customer';
 import { registerAdminRoutes } from './routes/admin';
 import { registerWebhookRoutes } from './routes/webhooks';
+import { registerStudioRoutes } from './routes/studio';
+import { registerAdminStudioRoutes } from './routes/admin-studio';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -57,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
   await app.register(rateLimit, {
     global: true,
-    max: cfg.NODE_ENV === 'test' ? 10_000 : 300,
+    max: cfg.NODE_ENV === 'test' ? 10_000 : cfg.RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
     errorResponseBuilder: (_req, ctx) => ({ statusCode: 429, error: { code: 'RATE_LIMITED', message: `Too many requests. Please try again in ${Math.ceil(ctx.ttl / 1000)} seconds.` } }),
   });
@@ -125,6 +128,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerPublicRoutes(app);
   registerCustomerRoutes(app);
   registerAdminRoutes(app);
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 5 } });
+  registerStudioRoutes(app);
+  registerAdminStudioRoutes(app);
   await registerWebhookRoutes(app);
 
   app.get('/api/openapi.json', async () => buildOpenApi(cfg.BETTER_AUTH_URL));

@@ -1,0 +1,346 @@
+{
+  "generatedAt": "2026-10-24T08:13:22.789Z",
+  "source": {
+    "provider": "Floot (AI image generation)",
+    "project": "Infinity Billion-Dollar Vision",
+    "baseUrl": "https://8708599d-ddf8-4808-a02a-8f69c61d3056.sandbox.floot.app"
+  },
+  "images": {
+    "photo-hero": {
+      "width": 1024,
+      "height": 576,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "photo-hero-1024.webp"
+        }
+      ]
+    },
+    "photo-portrait": {
+      "width": 768,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-portrait-640.webp"
+        },
+        {
+          "width": 768,
+          "file": "photo-portrait-768.webp"
+        }
+      ]
+    },
+    "photo-product": {
+      "width": 1024,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-product-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "photo-product-1024.webp"
+        }
+      ]
+    },
+    "photo-commercial": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-commercial-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "photo-commercial-1024.webp"
+        }
+      ]
+    },
+    "photo-event": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-event-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "photo-event-1024.webp"
+        }
+      ]
+    },
+    "video-promo": {
+      "width": 1024,
+      "height": 576,
+      "variants": [
+        {
+          "width": 640,
+          "file": "video-promo-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "video-promo-1024.webp"
+        }
+      ]
+    },
+    "video-corporate": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "video-corporate-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "video-corporate-1024.webp"
+        }
+      ]
+    },
+    "photo-architecture": {
+      "width": 768,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "photo-architecture-640.webp"
+        },
+        {
+          "width": 768,
+          "file": "photo-architecture-768.webp"
+        }
+      ]
+    },
+    "podcast-hero": {
+      "width": 1024,
+      "height": 576,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-hero-1024.webp"
+        }
+      ]
+    },
+    "podcast-video": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-video-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-video-1024.webp"
+        }
+      ]
+    },
+    "podcast-mic": {
+      "width": 768,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-mic-640.webp"
+        },
+        {
+          "width": 768,
+          "file": "podcast-mic-768.webp"
+        }
+      ]
+    },
+    "podcast-control": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-control-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-control-1024.webp"
+        }
+      ]
+    },
+    "podcast-multicam": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-multicam-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-multicam-1024.webp"
+        }
+      ]
+    },
+    "podcast-lounge": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-lounge-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-lounge-1024.webp"
+        }
+      ]
+    },
+    "podcast-booth": {
+      "width": 768,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-booth-640.webp"
+        },
+        {
+          "width": 768,
+          "file": "podcast-booth-768.webp"
+        }
+      ]
+    },
+    "podcast-detail": {
+      "width": 1024,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "podcast-detail-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "podcast-detail-1024.webp"
+        }
+      ]
+    },
+    "events-hero": {
+      "width": 1024,
+      "height": 576,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-hero-1024.webp"
+        }
+      ]
+    },
+    "events-corporate": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-corporate-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-corporate-1024.webp"
+        }
+      ]
+    },
+    "events-celebration": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-celebration-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-celebration-1024.webp"
+        }
+      ]
+    },
+    "events-workshop": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-workshop-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-workshop-1024.webp"
+        }
+      ]
+    },
+    "events-launch": {
+      "width": 1024,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-launch-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-launch-1024.webp"
+        }
+      ]
+    },
+    "events-dinner": {
+      "width": 1024,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-dinner-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-dinner-1024.webp"
+        }
+      ]
+    },
+    "events-venue": {
+      "width": 1024,
+      "height": 768,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-venue-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-venue-1024.webp"
+        }
+      ]
+    },
+    "events-detail": {
+      "width": 1024,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 640,
+          "file": "events-detail-640.webp"
+        },
+        {
+          "width": 1024,
+          "file": "events-detail-1024.webp"
+        }
+      ]
+    }
+  }
+}

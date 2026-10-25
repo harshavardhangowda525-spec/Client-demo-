@@ -41,7 +41,7 @@ Some demo bookings are created in the "awaiting payment" state with a 30-minute 
 ## 5. Run
 
 ```bash
-pnpm dev     # development: API (watch mode) + 3 websites + admin
+pnpm dev     # development: API (watch mode) + 4 websites + admin
 # or
 pnpm build && pnpm start   # production builds
 ```
@@ -51,6 +51,7 @@ pnpm build && pnpm start   # production builds
 | http://localhost:3001 | Photography & videography |
 | http://localhost:3002 | Podcast studio |
 | http://localhost:3003 | Event management |
+| http://localhost:3004 | Infinity Studios: discovery & booking platform |
 | http://localhost:3100 | Admin panel |
 | http://localhost:4000/api/health | API health |
 | http://localhost:4000/api/openapi.json | Live OpenAPI document |
@@ -58,6 +59,16 @@ pnpm build && pnpm start   # production builds
 Each website proxies `/api/*` and `/media/*` to the API, so sign-in cookies stay first-party. In local development all sites share the `localhost` cookie jar, so one sign-in works across every site.
 
 ## 6. Demonstration script
+
+**Infinity Studios (http://localhost:3004)**
+
+1. Pick a city in the header, type *podcast* in the search box and open a suggestion.
+2. On a service page, choose a package and a free slot in the booking panel. The price is calculated on the server. **Continue to book**, enter your details, reserve, then simulate the deposit payment and open the receipt.
+3. Open *Brand & advertising shoots* → **Request a quote**. Attach a PDF or image and send the brief; it becomes an enquiry, not a booking.
+4. Sign in as the demo customer and save a service (♡). Set notification preferences, and from a booking at least 48 hours away, request a new time.
+5. In admin, decide the request under *Reschedule requests*, download the brief's attachment under *Enquiries & briefs*, and edit banners, categories, equipment, testimonials and policy pages under *Studio site*.
+
+**The three brand sites**
 
 1. **Photography site → Book a session.** Choose *Product photography* and watch the server-side price breakdown update. Pick a date and time, enter your details and reserve the slot.
 2. On the booking status page, choose **Pay deposit → Simulate successful payment**. The status changes to *Confirmed*, and the payment is labelled *Simulated*.

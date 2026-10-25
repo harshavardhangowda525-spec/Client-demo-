@@ -10,7 +10,8 @@ const NAV: { title: string; items: { href: string; label: string; perm: string }
   { title: 'Operations', items: [
     { href: '/', label: 'Dashboard', perm: 'bookings.read' },
     { href: '/bookings', label: 'Bookings', perm: 'bookings.read' },
-    { href: '/enquiries', label: 'Event enquiries', perm: 'enquiries.read' },
+    { href: '/reschedule-requests', label: 'Reschedule requests', perm: 'bookings.read' },
+    { href: '/enquiries', label: 'Enquiries & briefs', perm: 'enquiries.read' },
     { href: '/customers', label: 'Customers', perm: 'customers.read' },
     { href: '/payments', label: 'Payments', perm: 'payments.read' },
   ] },
@@ -18,6 +19,7 @@ const NAV: { title: string; items: { href: string; label: string; perm: string }
     { href: '/services', label: 'Services & packages', perm: 'catalog.read' },
     { href: '/locations', label: 'Locations & resources', perm: 'catalog.read' },
     { href: '/content', label: 'Content & messages', perm: 'content.manage' },
+    { href: '/studio-site', label: 'Studio site', perm: 'content.manage' },
   ] },
   { title: 'System', items: [
     { href: '/settings', label: 'Configuration', perm: 'settings.read' },

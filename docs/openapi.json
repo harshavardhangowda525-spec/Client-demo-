@@ -515,6 +515,12 @@
                   "acceptTerms": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "sourceSite": {
+                    "type": "string",
+                    "enum": [
+                      "STUDIO"
+                    ]
                   }
                 },
                 "required": [
@@ -983,6 +989,26 @@
                     "type": "string",
                     "maxLength": 3000
                   },
+                  "companyName": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "expectedDuration": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "deliverables": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "contact": {
                     "type": "object",
                     "properties": {
@@ -1165,7 +1191,8 @@
                     "enum": [
                       "PHOTO",
                       "PODCAST",
-                      "EVENTS"
+                      "EVENTS",
+                      "STUDIO"
                     ]
                   },
                   "name": {
@@ -1410,7 +1437,8 @@
               "enum": [
                 "PHOTO",
                 "PODCAST",
-                "EVENTS"
+                "EVENTS",
+                "STUDIO"
               ]
             }
           },
@@ -1690,7 +1718,8 @@
               "enum": [
                 "PHOTO",
                 "PODCAST",
-                "EVENTS"
+                "EVENTS",
+                "STUDIO"
               ]
             }
           }
@@ -3079,7 +3108,8 @@
               "enum": [
                 "PHOTO",
                 "PODCAST",
-                "EVENTS"
+                "EVENTS",
+                "STUDIO"
               ]
             }
           }
@@ -3492,6 +3522,1438 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/home": {
+      "get": {
+        "summary": "Studio home page: banners, categories, popular/featured services (with real next availability), packages, facilities, portfolio, testimonials, FAQs",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public. Rate limit: 120 per 1 minute.",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/search": {
+      "get": {
+        "summary": "Search services, packages, categories and equipment",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public. Rate limit: 120 per 1 minute.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "",
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/categories": {
+      "get": {
+        "summary": "Browsing categories",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/cities": {
+      "get": {
+        "summary": "Cities with an active studio location (for the location selector)",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/services": {
+      "get": {
+        "summary": "Service listing with filters (category, text, price, duration, city, equipment, type, available date), sorting and pagination",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public. Rate limit: 120 per 1 minute.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "maxDuration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 15,
+              "maximum": 1440
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "equipment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "package",
+                "hourly",
+                "fixed",
+                "quote"
+              ]
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "popular",
+              "type": "string",
+              "enum": [
+                "popular",
+                "price_asc",
+                "price_desc",
+                "duration",
+                "name"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 48
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/services/{slug}": {
+      "get": {
+        "summary": "Service detail: packages, add-ons, equipment, locations, policy, portfolio, related services",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/portfolio": {
+      "get": {
+        "summary": "Portfolio (images and videos) with category filter",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/pages/{slug}": {
+      "get": {
+        "summary": "Policy / information page (privacy, terms, cancellation-refund)",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/studio/enquiries": {
+      "post": {
+        "summary": "Submit a project brief for a custom quotation (not a booking)",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public. Rate limit: 10 per 10 minutes.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "categoryId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "eventType": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "preferredDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "alternateDate": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "const": ""
+                      }
+                    ]
+                  },
+                  "locationId": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "const": ""
+                      }
+                    ]
+                  },
+                  "venueDetails": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "expectedAttendance": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
+                  "serviceIds": {
+                    "default": [],
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "budgetMinMinor": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "budgetMaxMinor": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "setupRequirements": {
+                    "type": "string",
+                    "maxLength": 3000
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 3000
+                  },
+                  "companyName": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "expectedDuration": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "deliverables": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "contact": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                      },
+                      "email": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "phone": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\+?[0-9 ()-]{7,20}$"
+                          },
+                          {
+                            "type": "string",
+                            "const": ""
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "email"
+                    ]
+                  },
+                  "acceptTerms": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "eventType",
+                  "preferredDate",
+                  "expectedAttendance",
+                  "contact",
+                  "acceptTerms"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/enquiries/{reference}/attachments": {
+      "post": {
+        "summary": "Attach a file to an enquiry (multipart field \"file\"; PDF/JPG/PNG/WebP, max 10 MB, max 5 per enquiry; type detected from content). Requires the enquiry access token or ownership.",
+        "tags": [
+          "Studio"
+        ],
+        "description": "Access: Public.",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{reference}/reschedule-requests": {
+      "post": {
+        "summary": "Ask to move a booking (the team approves; original slot stays reserved until then)",
+        "tags": [
+          "Booking"
+        ],
+        "description": "Access: Public. Rate limit: 10 per 10 minutes.",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string"
+                  },
+                  "startTime": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "date",
+                  "startTime"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/me/saved": {
+      "get": {
+        "summary": "Saved services",
+        "tags": [
+          "Account"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/me/saved/{serviceId}": {
+      "put": {
+        "summary": "Save a service",
+        "tags": [
+          "Account"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a saved service",
+        "tags": [
+          "Account"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/me/preferences": {
+      "get": {
+        "summary": "Notification preferences",
+        "tags": [
+          "Account"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update notification preferences (WhatsApp requires consent)",
+        "tags": [
+          "Account"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "notifyEmail": {
+                    "type": "boolean"
+                  },
+                  "notifyWhatsapp": {
+                    "type": "boolean"
+                  },
+                  "whatsappConsent": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "notifyEmail",
+                  "notifyWhatsapp"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners": {
+      "get": {
+        "summary": "List home banners",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create home banners",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/{id}": {
+      "put": {
+        "summary": "Update home banners",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete home banners",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/discovery-categories": {
+      "get": {
+        "summary": "List browsing categories",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create browsing categories",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/discovery-categories/{id}": {
+      "put": {
+        "summary": "Update browsing categories",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/equipment": {
+      "get": {
+        "summary": "List equipment & facilities",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `catalog.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create equipment & facilities",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `catalog.manage`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/equipment/{id}": {
+      "put": {
+        "summary": "Update equipment & facilities",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `catalog.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/testimonials": {
+      "get": {
+        "summary": "List testimonials",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create testimonials",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/testimonials/{id}": {
+      "put": {
+        "summary": "Update testimonials",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete testimonials",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/pages": {
+      "get": {
+        "summary": "Policy and information pages",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/pages/{slug}": {
+      "put": {
+        "summary": "Update a policy page",
+        "tags": [
+          "Admin: studio site"
+        ],
+        "description": "Access: Staff with permission `content.manage`.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/templates": {
+      "get": {
+        "summary": "Notification templates (defaults and overrides)",
+        "tags": [
+          "Admin: settings"
+        ],
+        "description": "Access: Staff with permission `settings.read`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/templates/{key}": {
+      "put": {
+        "summary": "Override a notification template",
+        "tags": [
+          "Admin: settings"
+        ],
+        "description": "Access: Staff with permission `settings.manage`.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Reset a template to its default",
+        "tags": [
+          "Admin: settings"
+        ],
+        "description": "Access: Staff with permission `settings.manage`.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reschedule-requests": {
+      "get": {
+        "summary": "Customer reschedule requests",
+        "tags": [
+          "Admin: bookings"
+        ],
+        "description": "Access: Staff with permission `bookings.read`.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "DECLINED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reschedule-requests/{id}/decide": {
+      "post": {
+        "summary": "Approve (re-checks availability) or decline a reschedule request",
+        "tags": [
+          "Admin: bookings"
+        ],
+        "description": "Access: Staff with permission `bookings.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "approve": {
+                    "type": "boolean"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "approve"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reminders/run": {
+      "post": {
+        "summary": "Send reminders for confirmed sessions in the next 24 hours (idempotent)",
+        "tags": [
+          "Admin: bookings"
+        ],
+        "description": "Access: Staff with permission `bookings.manage`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/attachments/{id}": {
+      "get": {
+        "summary": "Download an enquiry attachment (always as a download, never inline)",
+        "tags": [
+          "Admin: enquiries"
+        ],
+        "description": "Access: Staff with permission `enquiries.read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success"
