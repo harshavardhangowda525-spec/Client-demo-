@@ -18,12 +18,12 @@ function manifestPath() {
   return process.env.MEDIA_MANIFEST_PATH ?? resolve(process.cwd(), '../../assets/demo-images/generated/manifest.json');
 }
 
-/** Reads the manifest written by `pnpm images:fetch` (re-read when it changes). */
+/** Reads the manifest written by `pnpm images:fetch` (re-read when it changes). The path is resolved at run time, so it is excluded from build tracing. */
 function manifest(): Record<string, ManifestEntry> {
   const p = manifestPath();
-  if (!existsSync(p)) return {};
-  const mtime = statSync(p).mtimeMs;
-  if (!cache || cache.mtime !== mtime) cache = { mtime, data: JSON.parse(readFileSync(p, 'utf8')).images ?? {} };
+  if (!existsSync(/*turbopackIgnore: true*/ p)) return {};
+  const mtime = statSync(/*turbopackIgnore: true*/ p).mtimeMs;
+  if (!cache || cache.mtime !== mtime) cache = { mtime, data: JSON.parse(readFileSync(/*turbopackIgnore: true*/ p, 'utf8')).images ?? {} };
   return cache.data;
 }
 
