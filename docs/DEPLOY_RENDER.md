@@ -16,16 +16,16 @@
 
 **If a name was taken,** Render adds a suffix to that service's URL. Copy the real URLs into **Env Groups → infinity-demo-urls**, then redeploy all six services (**Manual Deploy → Deploy latest commit**).
 
-**Already deployed the earlier version?** After merging, open the Blueprint in Render and choose **Sync** (or **Manual sync**). Render then creates the new `infinity-demo-studio` service and adds `SITE_URL_STUDIO` to the env group. Redeploy the API: it applies the new migrations, and because the existing demo database has no studio content, it reloads the full demo data set. Bookings made while testing the old demo are removed. It refuses to do this if the database holds any non-demo bookings, and logs a warning instead.
+**Already deployed the earlier version?** After merging, open the Blueprint in Render and choose **Sync**. Render creates the new `infinity-demo-studio` service and adds `SITE_URL_STUDIO` to the env group. When the API restarts, it adds any missing studio content (categories, banners, equipment, policy pages, FAQs and the new services). Existing bookings, customers and content are never changed or removed.
 
-**Turn on Razorpay test payments:**
+**Razorpay test payments:** `render.yaml` sets `PAYMENTS_MODE=live` on the API and declares `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` without values, so the keys never go into the repository.
 1. Click **Dashboard** → **infinity-demo-api** → **Environment** (left menu).
-2. Edit `PAYMENTS_MODE` and change `demo` to `live`.
-3. Click **Add Environment Variable** twice to add `RAZORPAY_KEY_ID` (the `rzp_test_…` key) and `RAZORPAY_KEY_SECRET`.
-4. Click **Save, rebuild, and deploy** (or **Save changes**, then **Manual Deploy → Deploy latest commit**).
-5. Open a booking on any site and click **Pay deposit**. Razorpay's checkout opens with a *Test Mode* ribbon.
+2. Check `PAYMENTS_MODE` is `live`. Set `RAZORPAY_KEY_ID` (the `rzp_test_…` key) and `RAZORPAY_KEY_SECRET`. If either key is missing, click **Add Environment Variable**.
+3. Click **Save, rebuild, and deploy**.
+4. Check `https://infinity-demo-api.onrender.com/api/v1/sites/PHOTO`. It should show `"paymentsMode":"live"` and `"paymentsTestMode":true`.
+5. Open a booking and click **Pay deposit**. Razorpay's checkout opens with a *Test Mode* ribbon.
 
-To switch back to simulated payments, set `PAYMENTS_MODE` to `demo` and redeploy the API.
+Values set in the dashboard for keys that `render.yaml` defines with a value (such as `PAYMENTS_MODE`) are reset on the next Blueprint sync. To use the simulated checkout permanently, change `PAYMENTS_MODE` to `demo` in `render.yaml`. Without Razorpay keys, `live` turns online payment off, and customers are told the team will arrange payment.
 
 **Free plan notes:**
 - Services sleep after 15 minutes idle; the first request takes about a minute. Open every link shortly before a meeting.

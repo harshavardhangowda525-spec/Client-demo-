@@ -23,8 +23,8 @@ export default function IntegrationsPage() {
           <tbody>{data.map((i) => (
             <tr key={i.key}>
               <td><strong>{i.name}</strong><div className="small muted">{i.category}</div></td>
-              <td><span className={`badge ${TONE[i.state] ? `badge--${TONE[i.state]}` : ''}`}>{i.label}</span>{i.lastCheckedAt && <div className="small muted">checked {formatDateTime(i.lastCheckedAt, 'Asia/Kolkata')}</div>}{i.message && <div className="small">{i.message}</div>}</td>
-              <td className="small mono">{i.missing.join(', ') || '—'}</td>
+              <td><span className={`badge ${TONE[i.state] ? `badge--${TONE[i.state]}` : ''}`}>{i.label}</span>{i.lastCheckedAt && <div className="small muted">checked {formatDateTime(i.lastCheckedAt, 'Asia/Kolkata')}</div>}{i.message && <div className="small">{i.message}</div>}{i.note && <div className="small">{i.note}</div>}</td>
+              <td className="small"><span className="mono">{i.missing.join(', ') || '—'}</span>{i.recommended?.length > 0 && <div className="muted">Recommended: <span className="mono">{i.recommended.join(', ')}</span></div>}</td>
               <td className="small">{i.fallback}</td>
               <td>{can('settings.manage') && i.verifiable && i.missing.length === 0 && (
                 <button className="btn btn--sm" onClick={async () => { const r = await mutate(`/api/v1/admin/integrations/${i.key}/verify`, 'POST'); setMsg(r.ok ? `${i.name}: ${(r.data as any).label}` : errorText(r.error)); reload(); }}>Verify now</button>

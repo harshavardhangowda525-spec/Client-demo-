@@ -23,6 +23,10 @@ interface IntegrationDef {
   name: string;
   category: 'Payments' | 'Email' | 'SMS' | 'WhatsApp' | 'Push' | 'Maps' | 'Authentication';
   vars: (keyof Env)[];
+  /** Settings that are recommended but not needed for the integration to work. */
+  optionalVars?: (keyof Env)[];
+  /** Extra context shown with the state (e.g. test mode, or switched off). */
+  note?: (env: Env) => string | null;
   /** True when the business has switched the integration on (so missing vars mean "awaiting"). */
   enabled?: (env: Env) => boolean;
   fallback: string;
@@ -44,8 +48,15 @@ const DEFINITIONS: IntegrationDef[] = [
     key: 'payments.razorpay',
     name: 'Razorpay payments',
     category: 'Payments',
-    vars: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'],
+    vars: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'],
+    // Without the webhook, payments and refunds are confirmed by checking with Razorpay's API instead.
+    optionalVars: ['RAZORPAY_WEBHOOK_SECRET'],
     enabled: (env) => env.PAYMENTS_MODE === 'live',
+    note: (env) => {
+      if (!env.RAZORPAY_KEY_ID) return null;
+      const mode = env.RAZORPAY_KEY_ID.startsWith('rzp_test_') ? 'Test mode keys (no real money).' : 'Live keys.';
+      return env.PAYMENTS_MODE === 'live' ? `${mode} In use for checkout.` : `${mode} Not in use: PAYMENTS_MODE is "${env.PAYMENTS_MODE}"; set it to "live" to use Razorpay.`;
+    },
     fallback: 'Checkout runs in clearly labelled demo mode. Simulated payments never move money.',
     verify: verifyRazorpayCredentials,
     verifiable: true,
@@ -123,6 +134,9 @@ export interface IntegrationStatus {
   state: IntegrationState;
   label: string;
   missing: string[];
+  /** Optional settings not yet provided. */
+  recommended: string[];
+  note: string | null;
   fallback: string;
   verifiable: boolean;
   lastCheckedAt: string | null;
@@ -162,6 +176,8 @@ export async function getIntegrationStatuses(db: Db = prisma): Promise<Integrati
       state,
       label: INTEGRATION_STATE_LABELS[state],
       missing: missing as string[],
+      recommended: (def.optionalVars ?? []).filter((v) => !env[v]) as string[],
+      note: def.note?.(env) ?? null,
       fallback: def.fallback,
       verifiable: def.verifiable,
       lastCheckedAt,
