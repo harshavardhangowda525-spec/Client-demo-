@@ -103,6 +103,23 @@ export async function buildApp(): Promise<FastifyInstance> {
     url: '/api/auth/*',
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
     handler: async (req, reply) => {
+      // Post-sign-in redirects (e.g. after Google) may only point at our own sites.
+      if (req.method === 'POST' && req.body && typeof req.body === 'object') {
+        const b = req.body as Record<string, unknown>;
+        for (const key of ['callbackURL', 'errorCallbackURL', 'newUserCallbackURL', 'redirectTo']) {
+          const v = b[key];
+          if (typeof v !== 'string' || (v.startsWith('/') && !v.startsWith('//'))) continue;
+          let origin: string | null = null;
+          try {
+            origin = new URL(v).origin;
+          } catch {
+            origin = null;
+          }
+          if (!origin || !cfg.allowedOrigins.includes(origin)) {
+            return reply.status(400).send({ error: { code: 'VALIDATION', message: 'That return address is not allowed.' } });
+          }
+        }
+      }
       const url = new URL(req.url, cfg.BETTER_AUTH_URL);
       const request = new Request(url, {
         method: req.method,

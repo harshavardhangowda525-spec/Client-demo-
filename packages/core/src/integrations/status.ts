@@ -45,6 +45,15 @@ async function httpCheck(url: string, headers: Record<string, string>): Promise<
 
 const DEFINITIONS: IntegrationDef[] = [
   {
+    key: 'auth.google',
+    name: 'Sign in with Google',
+    category: 'Authentication',
+    vars: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+    fallback: 'Customers sign in with email and password only.',
+    note: (env) => (env.GOOGLE_CLIENT_ID ? `Offered on the Infinity Studios site. Google redirects to ${env.SITE_URL_STUDIO}/api/auth/callback/google (add this as an authorised redirect URI in Google Cloud). Staff accounts cannot use it.` : null),
+    verifiable: false,
+  },
+  {
     key: 'payments.razorpay',
     name: 'Razorpay payments',
     category: 'Payments',
@@ -211,5 +220,6 @@ export function publicIntegrationFlags() {
     mapsEmbedKey: env.GOOGLE_MAPS_EMBED_API_KEY ?? null,
     emailDelivery: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
     whatsappDelivery: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_WHATSAPP_FROM),
+    googleSignIn: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
   };
 }

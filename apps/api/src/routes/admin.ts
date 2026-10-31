@@ -465,6 +465,8 @@ export function registerAdminRoutes(app: FastifyInstance) {
       if (!before) throw new DomainError('NOT_FOUND', 'User not found.');
       const updated = await prisma.user.update({ where: { id: params.id }, data: body, select: { id: true, role: true, isActive: true } });
       if (body.isActive === false || (body.role && body.role !== before.role)) await prisma.session.deleteMany({ where: { userId: params.id } });
+      // Staff sign in with a password only: remove any Google (social) sign-in link on promotion.
+      if (body.role && body.role !== 'customer') await prisma.account.deleteMany({ where: { userId: params.id, providerId: { not: 'credential' } } });
       await recordAudit(actor!, { action: 'user.updated', entityType: 'User', entityId: params.id, before, after: body }, ctx);
       return updated;
     },
