@@ -26,6 +26,8 @@ export interface PricingInput {
   base: BaseCharge;
   addOns?: AddOnCharge[];
   discountMinor?: number;
+  /** Shown on the discount line, e.g. "Offer FIRST10". */
+  discountLabel?: string;
   taxRateBps: number;
   taxLabel: string;
   fees?: FeeRule[];
@@ -131,7 +133,7 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
   const discountMinor = Math.min(input.discountMinor ?? 0, subtotalMinor);
   assertNonNegativeInt(discountMinor, 'discountMinor');
   if (discountMinor > 0) {
-    lines.push({ kind: 'DISCOUNT', refId: null, description: 'Discount', quantity: 1, unitPriceMinor: -discountMinor, totalMinor: -discountMinor });
+    lines.push({ kind: 'DISCOUNT', refId: null, description: input.discountLabel ?? 'Discount', quantity: 1, unitPriceMinor: -discountMinor, totalMinor: -discountMinor });
   }
   const afterDiscount = subtotalMinor - discountMinor;
 

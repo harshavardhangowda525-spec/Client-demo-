@@ -65,6 +65,20 @@ Creating a booking or enquiry returns a one-time `accessToken`. Only its SHA-256
 | POST | `/api/v1/enquiries/{reference}/attachments` | Multipart field `file`, with `X-Booking-Token`. PDF/JPG/PNG/WebP, detected from the content; max 10 MB each, 5 per enquiry. |
 | POST | `/api/v1/bookings/{reference}/reschedule-requests` `{date, startTime, reason?}` | Asks to move a booking. The original slot stays reserved until staff approve; requests close 48 hours before the session (configurable). |
 
+### BookMyShow-style features
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/v1/studio/services/{slug}/showtimes?date&packageId\|durationMin&city` | Date strip (free times per day) and free start times per studio for the chosen date |
+| GET | `/api/v1/studio/services/{slug}/reviews` | Published reviews (rating summary, distribution, latest) |
+| GET | `/api/v1/studio/offers` | Current offers shown on the website |
+| POST | `/api/v1/quotes` with `couponCode` | Server-side discount; an invalid code returns 400 with `details[0].path = "couponCode"` |
+| POST | `/api/v1/bookings` with `couponCode` | Coupon re-checked under a lock; the redemption is stored with the booking |
+| POST | `/api/v1/bookings/{reference}/review` `{rating, comment?}` | Only the booking's customer, only after the session |
+| GET | `/api/v1/bookings/{reference}/ticket` | E-ticket with the HMAC-signed check-in code (confirmed bookings) |
+| POST | `/api/v1/admin/check-in` `{code}` | Staff check-in (opens 3 h before, closes 1 h after; repeat scans are safe) |
+| GET/POST/PUT | `/api/v1/admin/offers[/{id}]` | Offers & coupons with redemption counts |
+| GET, POST | `/api/v1/admin/reviews`, `/admin/reviews/{id}/moderate` | Hide (reason required) or show reviews |
+
 ### Account (signed in)
 `GET /api/v1/me` · `PATCH /api/v1/me/profile` · `GET /api/v1/me/bookings` · `/me/enquiries` · `/me/payments` · `GET /me/saved`, `PUT|DELETE /me/saved/{serviceId}` · `GET|PATCH /me/preferences` (email/WhatsApp; WhatsApp requires explicit consent)
 

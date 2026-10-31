@@ -50,7 +50,8 @@ describe('studio discovery API', () => {
     expect(listing.total).toBeGreaterThan(3);
     expect((await get('/api/v1/studio/services?sort=bogus')).statusCode).toBe(400);
     expect(json(await get('/api/v1/studio/services/product-photography')).name).toBe('Product photography');
-    expect((await get('/api/v1/studio/services/corporate-event-management')).statusCode).toBe(404);
+    expect(json(await get('/api/v1/studio/services/corporate-event-management')).name).toBe('Corporate event management');
+    expect((await get('/api/v1/studio/services/no-such-service')).statusCode).toBe(404);
     expect(json(await get('/api/v1/studio/pages/cancellation-refund')).isTemplate).toBe(true);
   });
 
@@ -132,5 +133,40 @@ describe('account and content administration', () => {
     expect((await send('PUT', '/api/v1/admin/templates/contact.received', { subject: 'Hi {{name}}', body: 'Hello {{name}}' }, cookies.manager)).statusCode).toBe(403);
     expect((await send('PUT', '/api/v1/admin/templates/contact.received', { subject: 'Hi {{name}}', body: 'Hello {{name}}' }, cookies.admin)).statusCode).toBe(200);
     expect((await send('DELETE', '/api/v1/admin/templates/contact.received', undefined, cookies.admin)).statusCode).toBe(200);
+  });
+});
+
+describe('BookMyShow-style features', () => {
+  it('serves showtimes, offers and reviews publicly; quotes apply coupons on the server', async () => {
+    const st = json(await get(`/api/v1/studio/services/audio-recording/showtimes?date=${weekday(12)}`));
+    expect(st.locations.length).toBeGreaterThan(0);
+    expect(st.days.length).toBeGreaterThan(0);
+    const offers = json(await get('/api/v1/studio/offers'));
+    expect(offers.map((o: { code: string }) => o.code)).toContain('DEMO10');
+    const reviews = json(await get('/api/v1/studio/services/portrait-photography/reviews'));
+    expect(reviews).toMatchObject({ count: expect.any(Number), items: expect.any(Array) });
+
+    const svc = await prisma.service.findFirstOrThrow({ where: { slug: 'portrait-photography' } });
+    const quoted = json(await send('POST', '/api/v1/quotes', { serviceId: svc.id, couponCode: 'DEMO10' }));
+    expect(quoted.offer.code).toBe('DEMO10');
+    expect(quoted.discountMinor).toBeGreaterThan(0);
+    const bad = await send('POST', '/api/v1/quotes', { serviceId: svc.id, couponCode: 'NOPE' });
+    expect(bad.statusCode).toBe(400);
+    expect(json(bad).error.details[0].path).toBe('couponCode');
+  });
+
+  it('tickets need a confirmed booking; check-in and offer management are staff-only', async () => {
+    const svc = await prisma.service.findFirstOrThrow({ where: { slug: 'portrait-photography' }, include: { locations: true } });
+    const created = json(await send('POST', '/api/v1/bookings', { brand: 'PHOTO', serviceId: svc.id, locationId: svc.locations[0]!.locationId, date: weekday(25), startTime: '11:00', contact: { name: 'Ticket Test', email: 'ticket@test.example' }, acceptTerms: true }));
+    const ref = created.booking.reference;
+    const ticket = await get(`/api/v1/bookings/${ref}/ticket`, undefined);
+    expect(ticket.statusCode).toBe(404); // no token: looks like it doesn't exist
+    const withToken = await app.inject({ method: 'GET', url: `/api/v1/bookings/${ref}/ticket`, headers: { 'x-booking-token': created.accessToken } });
+    expect(withToken.statusCode).toBe(409); // not confirmed yet
+
+    expect((await send('POST', '/api/v1/admin/check-in', { code: `${ref}.AAAAAAAAAA` }, cookies.customer)).statusCode).toBe(403);
+    expect((await send('POST', '/api/v1/admin/check-in', { code: `${ref}.AAAAAAAAAA` }, cookies.admin)).statusCode).toBe(400);
+    expect((await send('POST', '/api/v1/admin/offers', { code: 'HACK', title: 'Nope', discountType: 'FLAT', value: 100 }, cookies.customer)).statusCode).toBe(403);
+    expect(json(await get('/api/v1/admin/offers', cookies.admin)).length).toBeGreaterThan(0);
   });
 });

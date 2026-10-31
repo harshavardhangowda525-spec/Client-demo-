@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fillGuestDetails, payDemoDeposit, SITES, uniqueEmail } from './helpers';
+import { SITES, fillGuestDetails, payDemoDeposit, pickFirstDay, uniqueEmail } from './helpers';
 
 test.describe('Podcast studio website', () => {
   test('main pages load', async ({ page }) => {
@@ -17,8 +17,7 @@ test.describe('Podcast studio website', () => {
   test('availability calendar deep-links into booking; slot is then no longer offered', async ({ page }) => {
     await page.goto(`${SITES.podcast}/availability`);
     await page.getByLabel('Session type').selectOption({ label: 'Studio rental' });
-    await page.waitForFunction(() => !document.querySelector('.calendar[aria-busy="true"]'));
-    await page.locator('.calendar__day[data-available="true"]').first().click();
+    await pickFirstDay(page);
     const slot = page.locator('a.slot').first();
     const time = (await slot.textContent())!.trim();
     await slot.click();

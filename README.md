@@ -7,7 +7,7 @@ A working demonstration built by **Infinity Web & Apps**. It runs four websites 
 | `apps/web-photo` | **Lumen Studio**: photography & videography | 3001 |
 | `apps/web-podcast` | **Signal Room**: podcast studio discovery & booking | 3002 |
 | `apps/web-events` | **Atelier Events**: event services, enquiries & quotations | 3003 |
-| `apps/web-studio` | **Infinity Studios (demo)**: browse, search, filter and book photography, video and podcast services; custom-quote briefs with attachments | 3004 |
+| `apps/web-studio` | **Infinity Studios (demo)**: BookMyShow-style platform for photography, video, podcast and events: city pop-up, showtimes-style booking, checkout with coupons and fees, e-tickets with QR codes, ratings & reviews, quote briefs | 3004 |
 | `apps/admin` | Central administration panel | 3100 |
 | `apps/api` | Shared REST API (Fastify) for all sites, the admin panel and the future mobile app | 4000 |
 

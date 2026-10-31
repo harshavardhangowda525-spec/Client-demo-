@@ -52,11 +52,12 @@ describe('studio discovery', () => {
     expect(quote.every((s) => s.nextAvailable === null && s.fromPriceMinor === null)).toBe(true);
   });
 
-  it('search returns real services matching every word; event services never appear', async () => {
+  it('search returns real services matching every word, including event services on the unified site', async () => {
     const r = await searchStudio('podcast recording');
     expect(r.services.length).toBeGreaterThan(0);
     for (const s of r.services) expect(`${s.name} ${s.summary} ${s.categories.map((c) => c.name).join(' ')}`.toLowerCase()).toMatch(/podcast|record/);
-    expect((await searchStudio('corporate event management')).services).toEqual([]);
+    expect((await searchStudio('corporate event management')).services.map((s) => s.slug)).toContain('corporate-event-management');
+    expect((await searchStudio('zzqx nothing matches')).services).toEqual([]);
     expect((await searchStudio('x')).services).toEqual([]);
     expect((await searchStudio('microphones')).services.length).toBeGreaterThan(0); // via equipment
   });
@@ -81,13 +82,14 @@ describe('studio discovery', () => {
     expect(rental.facets.cities).toEqual(['Bengaluru', 'Mumbai']);
   });
 
-  it('service detail includes packages, equipment, locations and related services; event services are not exposed', async () => {
+  it('service detail includes packages, equipment, locations and related services; inactive services are not exposed', async () => {
     const d = await getStudioService('portrait-photography');
     expect(d.packages.length).toBe(2);
     expect(d.equipment.every((e) => e.isVerified === false)).toBe(true);
     expect(d.related.length).toBeGreaterThan(0);
     expect(d.locations[0]!.openingHours.length).toBeGreaterThan(0);
-    await expect(getStudioService('corporate-event-management')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect((await getStudioService('corporate-event-management')).categories.map((c) => c.slug)).toContain('events');
+    await expect(getStudioService('no-such-service')).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('editing a service without studio fields keeps its categories, equipment, gallery and featured flag', async () => {
@@ -215,7 +217,9 @@ describe('content, preferences and notifications', () => {
     expect((await listSavedServices(customer)).map((s) => s.id)).toEqual([I.portrait]);
     await setSavedService(customer, I.portrait, false);
     expect(await listSavedServices(customer)).toEqual([]);
-    await expect(setSavedService(customer, I.corporateEvents, true)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(setSavedService(customer, 'no-such-service', true)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await setSavedService(customer, I.corporateEvents, true); // events are part of the unified site
+    await setSavedService(customer, I.corporateEvents, false);
     await expect(updateNotificationPreferences(customer, { notifyEmail: true, notifyWhatsapp: true })).rejects.toThrow(/WhatsApp/);
     const p = await updateNotificationPreferences(customer, { notifyEmail: false, notifyWhatsapp: true, whatsappConsent: true });
     expect(p.whatsappConsentAt).not.toBeNull();

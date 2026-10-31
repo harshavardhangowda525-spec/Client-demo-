@@ -1,4 +1,4 @@
-import { customerActions, PAYMENT_STATUS_LABELS, STATUS_DESCRIPTIONS, STATUS_LABELS, type BookingStatusValue } from '@studio/core';
+import { canReview, customerActions, PAYMENT_STATUS_LABELS, STATUS_DESCRIPTIONS, STATUS_LABELS, type BookingStatusValue } from '@studio/core';
 import type { getBookingForViewer } from '@studio/core';
 
 type BookingWithRelations = Awaited<ReturnType<typeof getBookingForViewer>>;
@@ -54,7 +54,12 @@ export function customerBookingDto(b: BookingWithRelations) {
       ...customerActions(b),
       canRequestReschedule:
         ['ENQUIRY_SUBMITTED', 'AWAITING_REVIEW', 'AWAITING_PAYMENT', 'PAYMENT_PENDING', 'CONFIRMED'].includes(status) && !b.rescheduleRequests.some((r) => r.status === 'PENDING'),
+      canReview: canReview(b) && b.review?.status !== 'HIDDEN',
+      hasTicket: ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(status),
     },
+    review: b.review ? { rating: b.review.rating, comment: b.review.comment, status: b.review.status, createdAt: b.review.createdAt.toISOString() } : null,
+    offer: b.offer ? { code: b.offer.code, title: b.offer.title } : null,
+    checkedInAt: b.checkedInAt?.toISOString() ?? null,
     sourceSite: b.sourceSite,
     rescheduleRequests: b.rescheduleRequests.map((r) => ({ id: r.id, status: r.status, requestedStart: r.requestedStart.toISOString(), reason: r.reason, decisionNote: r.decisionNote, createdAt: r.createdAt.toISOString() })),
     createdAt: b.createdAt.toISOString(),

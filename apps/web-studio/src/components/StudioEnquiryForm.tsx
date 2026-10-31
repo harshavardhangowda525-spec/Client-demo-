@@ -79,7 +79,7 @@ export function StudioEnquiryForm({ services, locations, me, initialService, tod
       acceptTerms: accept,
     };
     if (brands.size > 1) {
-      setServerError('Please send separate briefs for photography/video and podcast services.');
+      setServerError('Please send a separate brief for each group (photography & video, podcast, or events).');
       return;
     }
     setBusy(true);
@@ -153,7 +153,7 @@ export function StudioEnquiryForm({ services, locations, me, initialService, tod
             </div>
           </div>
         ))}
-        {brands.size > 1 && <p className="field-error">Photography/video and podcast services are quoted separately. Please choose from one group per brief.</p>}
+        {brands.size > 1 && <p className="field-error">Each group (photography &amp; video, podcast, events) is quoted separately. Please choose from one group per brief.</p>}
       </fieldset>
 
       <div className="form-row form-row--2">

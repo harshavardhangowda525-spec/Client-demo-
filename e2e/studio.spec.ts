@@ -1,10 +1,38 @@
 import { expect, test, type Page } from '@playwright/test';
-import { payDemoDeposit, pickFirstSlot, SITES, uniqueEmail } from './helpers';
+import { payDemoDeposit, SITES, uniqueEmail } from './helpers';
 
 const S = SITES.studio;
 
 // Smallest valid PNG (1×1), so the upload passes the server's content check.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+
+/** A weekday about `offset` days ahead (YYYY-MM-DD), so lead-time and weekend rules don't interfere. */
+function weekday(offset: number) {
+  const d = new Date(Date.now() + offset * 86_400_000);
+  while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Showtimes page → first free time → booking summary → reserve. Returns once on the booking page. */
+async function bookViaShowtimes(page: Page, slug: string, date: string, opts: { email?: string; coupon?: string } = {}) {
+  await page.goto(`${S}/service/${slug}/slots?date=${date}`);
+  await page.locator('.st-time').first().click();
+  await expect(page).toHaveURL(/\/checkout\?/);
+  await expect(page.getByText('Amount payable')).toBeVisible();
+  await expect(page.locator('.st-summary__total')).toContainText('₹');
+  if (opts.coupon) {
+    await page.getByLabel('Coupon code').fill(opts.coupon);
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(page.getByText(`Offer ${opts.coupon}`)).toBeVisible();
+  }
+  if (opts.email !== undefined) {
+    await page.getByLabel('Full name').fill('Studio Guest');
+    await page.getByLabel('Email').fill(opts.email);
+  }
+  await page.getByLabel(/booking terms/).check();
+  await page.getByRole('button', { name: /Proceed to pay|Send booking request/ }).click();
+  await expect(page).toHaveURL(/booking-status\?ref=/);
+}
 
 async function register(page: Page, email: string) {
   await page.goto(`${S}/account`);
@@ -17,10 +45,27 @@ async function register(page: Page, email: string) {
 }
 
 test.describe('Infinity Studios platform', () => {
+  // The city pop-up opens on a first visit; most tests start as a returning visitor.
+  test.beforeEach(async ({ context }, info) => {
+    if (!info.title.includes('pop-up')) await context.addCookies([{ name: 'studio_city_chosen', value: '1', url: S }]);
+  });
+
+  test('first visit asks for a city with a pop-up, then remembers it', async ({ page }) => {
+    await page.goto(S);
+    const dialog = page.getByRole('dialog', { name: 'Select your city' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Bengaluru' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Recommended services in Bengaluru' })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('dialog', { name: 'Select your city' })).toBeHidden();
+  });
+
   test('home shows real sections and search suggests services', async ({ page }) => {
     await page.goto(S);
-    await expect(page.getByRole('heading', { name: /Popular services/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Browse by category' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Recommended services/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Explore by category' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Offers for you' })).toBeVisible();
     // No testimonials are seeded, so the section must not render.
     await expect(page.getByRole('heading', { name: 'What clients say' })).toHaveCount(0);
     const search = page.getByRole('combobox', { name: 'Search services' }).first();
@@ -47,28 +92,37 @@ test.describe('Infinity Studios platform', () => {
     await expect(page.locator('.st-toolbar strong')).toHaveText(String(all));
   });
 
-  test('book from the service page panel and pay a simulated deposit', async ({ page }) => {
+  test('service page → showtimes → booking summary with coupon → pay → e-ticket', async ({ page }) => {
     await page.goto(`${S}/service/portrait-photography`);
-    const panel = page.locator('#book');
-    await expect(panel.getByText(/₹/).first()).toBeVisible();
-    await pickFirstSlot(page);
-    await panel.getByRole('link', { name: 'Continue to book' }).click();
-    await expect(page).toHaveURL(/\/book\?.*step=2/);
-    await page.getByLabel('Full name').fill('Studio Guest');
-    await page.getByLabel('Email').fill(uniqueEmail('studio'));
-    await page.getByRole('button', { name: 'Review booking' }).click();
-    await page.getByLabel(/I have read the booking terms/).check();
-    await page.getByRole('button', { name: 'Reserve and continue to payment' }).click();
-    await expect(page).toHaveURL(/booking-status\?ref=PH-/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Portrait photography');
+    await expect(page.getByText('No reviews yet.', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Book', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/service\/portrait-photography\/slots/);
+    await expect(page.getByRole('navigation', { name: 'Date' })).toBeVisible();
+    await bookViaShowtimes(page, 'portrait-photography', weekday(9), { email: uniqueEmail('studio'), coupon: 'DEMO10' });
+    await expect(page).toHaveURL(/ref=PH-/);
+    await expect(page.getByRole('timer')).toContainText(/Complete payment in \d\d:\d\d/);
     await payDemoDeposit(page);
+    await page.getByRole('link', { name: 'View e-ticket' }).click();
+    await expect(page.getByRole('img', { name: /QR code for ticket PH-/ })).toBeVisible();
+    await expect(page.locator('.st-ticket__code')).toHaveText(/^PH-[0-9A-Z]{8}\.[A-Z0-9]{10}$/);
+    await page.getByRole('link', { name: 'Booking details' }).click();
     await page.getByRole('link', { name: 'View receipt' }).click();
     await expect(page.getByRole('heading', { name: 'Payment receipt' })).toBeVisible();
-    await expect(page.getByText('This is not a tax invoice.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Offer DEMO10')).toBeVisible();
+  });
+
+  test('offers page lists coupon codes; events are part of the unified site', async ({ page }) => {
+    await page.goto(`${S}/offers`);
+    await expect(page.locator('.st-offer__code', { hasText: 'DEMO10' })).toBeVisible();
+    await page.goto(`${S}/services/events`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Events');
+    await expect(page.getByRole('heading', { name: 'Corporate event management' })).toBeVisible();
   });
 
   test('quote-only services send a brief with an attachment, not a booking', async ({ page }) => {
     await page.goto(`${S}/service/brand-and-advertising-shoots`);
-    await page.locator('#book').getByRole('link', { name: 'Request a quote' }).click();
+    await page.getByRole('link', { name: 'Request a quote' }).first().click();
     await expect(page).toHaveURL(/\/enquire\?service=brand-and-advertising-shoots/);
     await expect(page.getByRole('button', { name: 'Brand & advertising shoots' })).toHaveAttribute('aria-pressed', 'true');
     await page.getByLabel('Project type').fill('Festive campaign stills');
@@ -103,14 +157,8 @@ test.describe('Infinity Studios platform', () => {
     await page.getByRole('button', { name: 'Save preferences' }).click();
     await expect(page.getByText('Preferences saved.')).toBeVisible();
 
-    // Book a slot far enough ahead to be reschedulable.
-    await page.goto(`${S}/service/audio-recording`);
-    await page.getByRole('button', { name: 'Next month' }).click();
-    await pickFirstSlot(page);
-    await page.locator('#book').getByRole('link', { name: 'Continue to book' }).click();
-    await page.getByRole('button', { name: 'Review booking' }).click();
-    await page.getByLabel(/I have read the booking terms/).check();
-    await page.getByRole('button', { name: 'Reserve and continue to payment' }).click();
+    // Book a slot far enough ahead to be reschedulable (signed in, so details are prefilled).
+    await bookViaShowtimes(page, 'audio-recording', weekday(20));
     await expect(page).toHaveURL(/booking-status\?ref=PC-/);
 
     // Pick a real alternative slot from the live availability API.

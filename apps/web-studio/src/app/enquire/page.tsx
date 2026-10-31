@@ -6,7 +6,7 @@ import { todayIn } from '../../lib/today';
 import { HOME_BRANDS } from '../../site';
 
 export const metadata: Metadata = { title: 'Request a custom quote' };
-const GROUP: Record<string, string> = { PHOTO: 'Photography & video', PODCAST: 'Podcast & studio production' };
+const GROUP: Record<string, string> = { PHOTO: 'Photography & video', PODCAST: 'Podcast & studio production', EVENTS: 'Events' };
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const [sp, me, catalogs, locationLists] = await Promise.all([searchParams, getMe(), Promise.all(HOME_BRANDS.map(getCatalog)), Promise.all(HOME_BRANDS.map(getLocations))]);

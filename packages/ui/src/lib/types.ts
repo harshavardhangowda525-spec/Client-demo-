@@ -128,7 +128,10 @@ export interface BookingDto {
   isDemo: boolean;
   history: { status: string; label: string; at: string; reason: string | null }[];
   payments: { type: string; status: string; amountMinor: number; isSimulated: boolean; at: string }[];
-  actions: { canPayDeposit: boolean; canPayBalance: boolean; canCancel: boolean; canRequestCancellation: boolean; canRequestReschedule?: boolean };
+  actions: { canPayDeposit: boolean; canPayBalance: boolean; canCancel: boolean; canRequestCancellation: boolean; canRequestReschedule?: boolean; canReview?: boolean; hasTicket?: boolean };
+  review?: { rating: number; comment: string | null; status: string; createdAt: string } | null;
+  offer?: { code: string; title: string } | null;
+  checkedInAt?: string | null;
   sourceSite?: Brand | null;
   rescheduleRequests?: { id: string; status: string; requestedStart: string; reason: string | null; decisionNote: string | null; createdAt: string }[];
   createdAt: string;

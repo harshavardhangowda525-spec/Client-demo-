@@ -199,7 +199,13 @@ function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, re
           </p>
           <p className="muted">{booking.statusDescription}</p>
           {booking.holdExpiresAt && (booking.status === 'AWAITING_PAYMENT' || booking.status === 'PAYMENT_PENDING') && (
-            <p className="small">Slot held until <strong>{formatTime(booking.holdExpiresAt, tz)}</strong> ({tz}). After that it is released automatically.</p>
+            <p className="small cluster">
+              <HoldCountdown until={booking.holdExpiresAt} onExpire={refresh} />
+              <span>Slot held until <strong>{formatTime(booking.holdExpiresAt, tz)}</strong> ({tz}). After that it is released automatically.</span>
+            </p>
+          )}
+          {showReceipt && booking.actions.hasTicket && (
+            <p><a className="btn btn--sm" href={`/ticket/${booking.reference}`}>View e-ticket</a>{booking.checkedInAt && <span className="badge badge--success" style={{ marginLeft: 8 }}>Checked in</span>}</p>
           )}
         </div>
 
@@ -259,6 +265,10 @@ function BookingDetail({ booking, setBooking, token, site, brandSites, isNew, re
 
         {showReceipt && booking.payments.length > 0 && (
           <p><a className="link-arrow" href={`/receipt/${booking.reference}`}>View receipt</a></p>
+        )}
+
+        {(booking.actions.canReview || booking.review) && (
+          <ReviewSection booking={booking} headers={headers} onDone={refresh} />
         )}
 
         {(booking.rescheduleRequests?.length || booking.actions.canRequestReschedule) && (
@@ -485,6 +495,89 @@ function CheckoutPanel({ booking, site, headers, onUpdated, refresh }: {
             <button type="button" className="btn btn--ghost" onClick={() => setDemo(null)} disabled={busy}>Cancel</button>
           </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+/** Live countdown for a payment hold (BookMyShow-style). Refreshes the booking when it runs out. */
+function HoldCountdown({ until, onExpire }: { until: string; onExpire: () => Promise<void> }) {
+  const end = new Date(until).getTime();
+  const [left, setLeft] = useState(() => Math.max(0, end - Date.now()));
+  useEffect(() => {
+    if (left <= 0) return;
+    const t = setInterval(() => {
+      const ms = Math.max(0, end - Date.now());
+      setLeft(ms);
+      if (ms === 0) {
+        clearInterval(t);
+        void onExpire();
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [end]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mm = String(Math.floor(left / 60_000)).padStart(2, '0');
+  const ss = String(Math.floor((left % 60_000) / 1000)).padStart(2, '0');
+  return (
+    <span className="st-countdown badge badge--warning" role="timer" aria-live="off" aria-label={`Time left to pay: ${mm} minutes ${ss} seconds`}>
+      {left > 0 ? `Complete payment in ${mm}:${ss}` : 'Payment time has run out'}
+    </span>
+  );
+}
+
+/** Star rating and comment, available once the session has taken place. */
+function ReviewSection({ booking, headers, onDone }: { booking: BookingDto; headers: Record<string, string>; onDone: () => Promise<void> }) {
+  const existing = booking.review;
+  const [rating, setRating] = useState(existing?.rating ?? 0);
+  const [comment, setComment] = useState(existing?.comment ?? '');
+  const [open, setOpen] = useState(!existing);
+  const [msg, setMsg] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (existing?.status === 'HIDDEN') {
+    return <section className="card card--surface"><h3>Your review</h3><p className="small muted" style={{ margin: 0 }}>Your review was removed by the studio.</p></section>;
+  }
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!rating) {
+      setMsg({ tone: 'danger', text: 'Choose a rating from 1 to 5 stars.' });
+      return;
+    }
+    setBusy(true);
+    const res = await api(`/api/v1/bookings/${booking.reference}/review`, { body: { rating, comment: comment || undefined }, headers });
+    setBusy(false);
+    if (res.ok) {
+      setMsg({ tone: 'success', text: 'Thank you! Your review is now shown on the service page.' });
+      setOpen(false);
+      await onDone();
+    } else setMsg({ tone: 'danger', text: res.error.message });
+  }
+  return (
+    <section className="card card--surface" aria-labelledby="review-h">
+      <h3 id="review-h">{existing ? 'Your review' : 'Rate your session'}</h3>
+      {msg && <div className={`alert alert--${msg.tone}`} role="status">{msg.text}</div>}
+      {!open && existing ? (
+        <div className="stack" style={{ gap: 'var(--space-2)' }}>
+          <p style={{ margin: 0, color: 'var(--accent-text)', letterSpacing: 1 }} aria-label={`${existing.rating} out of 5 stars`}>{'★★★★★'.slice(0, existing.rating)}{'☆☆☆☆☆'.slice(0, 5 - existing.rating)}</p>
+          {existing.comment && <p style={{ margin: 0 }}>{existing.comment}</p>}
+          <div><button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen(true)}>Edit review</button></div>
+        </div>
+      ) : (
+        <form className="stack" onSubmit={save}>
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="label">Your rating</legend>
+            <div className="st-star-input" role="radiogroup" aria-label="Rating">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button" role="radio" aria-checked={rating === n} className={n <= rating ? 'on' : undefined} onClick={() => setRating(n)} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
+              ))}
+            </div>
+          </fieldset>
+          <div className="field">
+            <label htmlFor="rv-comment">Tell others about your experience (optional)</label>
+            <textarea id="rv-comment" className="textarea" rows={3} maxLength={1500} value={comment} onChange={(e) => setComment(e.target.value)} />
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>Your first name and last initial are shown with your review.</p>
+          <div><button className="btn btn--sm" type="submit" disabled={busy}>{existing ? 'Update review' : 'Submit review'}</button></div>
+        </form>
       )}
     </section>
   );

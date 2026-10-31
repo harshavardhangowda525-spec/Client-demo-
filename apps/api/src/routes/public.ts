@@ -109,7 +109,12 @@ export function registerPublicRoutes(app: FastifyInstance) {
   defineRoute(app, {
     method: 'POST', url: '/api/v1/quotes', summary: 'Itemised price for a service, package, duration and add-ons', tags: ['Booking'], access: 'public',
     body: quoteRequestSchema, rateLimit: { max: 120, timeWindow: '1 minute' },
-    handler: async ({ body }) => (await quoteService(body)).breakdown,
+    handler: async ({ body, actor }) => {
+      // Signed-in customers get per-customer coupon limits checked up front.
+      const customerId = actor ? (await prisma.customerProfile.findUnique({ where: { userId: actor.userId }, select: { id: true } }))?.id : null;
+      const q = await quoteService({ ...body, customerId });
+      return { ...q.breakdown, offer: q.offer };
+    },
   });
 
   defineRoute(app, {

@@ -202,27 +202,27 @@ model RolePermission {
 }
 
 model User {
-  id            String    @id
+  id            String   @id
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  role          String    @default("customer")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String   @default("customer")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  roleRef        Role                @relation(fields: [role], references: [key], onDelete: Restrict)
-  sessions       Session[]
-  accounts       Account[]
-  profile        CustomerProfile?
-  auditLogs      AuditLog[]
-  bookingNotes   BookingNote[]
-  statusChanges  BookingStatusHistory[]
-  quotations     Quotation[]          @relation("QuotationCreatedBy")
-  followUps      EnquiryFollowUp[]
-  assignedEnquiries EventEnquiry[]    @relation("EnquiryAssignee")
-  refunds        Refund[]
+  roleRef           Role                   @relation(fields: [role], references: [key], onDelete: Restrict)
+  sessions          Session[]
+  accounts          Account[]
+  profile           CustomerProfile?
+  auditLogs         AuditLog[]
+  bookingNotes      BookingNote[]
+  statusChanges     BookingStatusHistory[]
+  quotations        Quotation[]            @relation("QuotationCreatedBy")
+  followUps         EnquiryFollowUp[]
+  assignedEnquiries EventEnquiry[]         @relation("EnquiryAssignee")
+  refunds           Refund[]
 
   @@index([role])
   @@map("user")
@@ -278,25 +278,27 @@ model Verification {
 // A customer record. Registered users own exactly one profile; guests get an
 // unlinked profile (userId = null) so bookings always carry a customer id.
 model CustomerProfile {
-  id             String   @id @default(cuid())
-  userId         String?  @unique
-  fullName       String
-  email          String
-  phone          String?
-  company        String?
-  marketingOptIn Boolean  @default(false)
+  id                String    @id @default(cuid())
+  userId            String?   @unique
+  fullName          String
+  email             String
+  phone             String?
+  company           String?
+  marketingOptIn    Boolean   @default(false)
   // Notification preferences. WhatsApp requires explicit, timestamped consent.
   notifyEmail       Boolean   @default(true)
   notifyWhatsapp    Boolean   @default(false)
   whatsappConsentAt DateTime?
-  isDemo         Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isDemo            Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  bookings  Booking[]
-  enquiries EventEnquiry[]
-  saved     SavedService[]
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bookings    Booking[]
+  enquiries   EventEnquiry[]
+  saved       SavedService[]
+  reviews     Review[]
+  redemptions OfferRedemption[]
 
   @@index([email])
   @@index([fullName])
@@ -357,17 +359,20 @@ model Service {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  category  Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  packages  Package[]
-  addOns    ServiceAddOn[]
-  locations ServiceLocation[]
-  resources ServiceResource[]
-  bookings  Booking[]
-  enquiries EnquiryService[]
+  category            Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  packages            Package[]
+  addOns              ServiceAddOn[]
+  locations           ServiceLocation[]
+  resources           ServiceResource[]
+  bookings            Booking[]
+  enquiries           EnquiryService[]
   discoveryCategories ServiceDiscoveryCategory[]
-  equipment ServiceEquipment[]
-  savedBy   SavedService[]
-  testimonials Testimonial[]
+  equipment           ServiceEquipment[]
+  savedBy             SavedService[]
+  testimonials        Testimonial[]
+
+  reviews Review[]
+  offers  OfferService[]
 
   @@unique([brand, slug])
   @@index([brand, isActive])
@@ -500,13 +505,13 @@ model ServiceResource {
 // Weekly opening hours in the location's local time. A row with resourceId
 // overrides the location's hours for that resource on that weekday.
 model OpeningHours {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   locationId  String
   resourceId  String?
   dayOfWeek   Int // 0 = Sunday … 6 = Saturday
   openMinute  Int // minutes after local midnight
   closeMinute Int
-  isDemo      Boolean   @default(true)
+  isDemo      Boolean @default(true)
 
   location Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
   resource Resource? @relation(fields: [resourceId], references: [id], onDelete: Cascade)
@@ -536,67 +541,75 @@ model BlockedPeriod {
 // ---------------------------------------------------------------------------
 
 model Booking {
-  id              String        @id @default(cuid())
-  reference       String        @unique
-  accessTokenHash String? // SHA-256 of the guest access token; never stored in plain text
-  brand           Brand
-  customerId      String
-  serviceId       String
-  packageId       String?
-  locationId      String
-  resourceId      String?
-  enquiryId       String?       @unique
-  quotationId     String?       @unique
+  id                  String        @id @default(cuid())
+  reference           String        @unique
+  accessTokenHash     String? // SHA-256 of the guest access token; never stored in plain text
+  brand               Brand
+  customerId          String
+  serviceId           String
+  packageId           String?
+  locationId          String
+  resourceId          String?
+  enquiryId           String?       @unique
+  quotationId         String?       @unique
   /// Website the booking was made on (e.g. STUDIO); links in messages point there. Null = the service's own site.
-  sourceSite      Brand?
-  startsAt        DateTime
-  endsAt          DateTime
+  sourceSite          Brand?
+  startsAt            DateTime
+  endsAt              DateTime
   // Window the resource is blocked for (endsAt + service buffer). Used by the
   // exclusion constraint that prevents overlapping reservations.
-  blockedFrom     DateTime
-  blockedUntil    DateTime
-  timezone        String
-  durationMin     Int
-  attendees       Int?
-  status          BookingStatus @default(DRAFT)
-  paymentStatus   PaymentStatus @default(UNPAID)
-  currency        String        @default("INR")
-  subtotalMinor   Int
-  discountMinor   Int           @default(0)
-  feesMinor       Int           @default(0)
-  taxMinor        Int           @default(0)
-  totalMinor      Int
-  depositMinor    Int
-  amountPaidMinor Int           @default(0)
-  amountRefundedMinor Int       @default(0)
-  priceBreakdown  Json
-  pricingVersion  String
-  holdExpiresAt   DateTime?
-  contactName     String
-  contactEmail    String
-  contactPhone    String?
-  customerNotes   String?
-  cancellationReason String?
-  isDemo          Boolean       @default(false)
-  version         Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  blockedFrom         DateTime
+  blockedUntil        DateTime
+  timezone            String
+  durationMin         Int
+  attendees           Int?
+  status              BookingStatus @default(DRAFT)
+  paymentStatus       PaymentStatus @default(UNPAID)
+  currency            String        @default("INR")
+  subtotalMinor       Int
+  discountMinor       Int           @default(0)
+  feesMinor           Int           @default(0)
+  taxMinor            Int           @default(0)
+  totalMinor          Int
+  depositMinor        Int
+  amountPaidMinor     Int           @default(0)
+  amountRefundedMinor Int           @default(0)
+  priceBreakdown      Json
+  pricingVersion      String
+  holdExpiresAt       DateTime?
+  contactName         String
+  contactEmail        String
+  contactPhone        String?
+  customerNotes       String?
+  cancellationReason  String?
+  /// Coupon applied at booking time (discount is already in discountMinor).
+  offerId             String?
+  /// Set when staff scan the e-ticket at the studio.
+  checkedInAt         DateTime?
+  checkedInById       String?
+  isDemo              Boolean       @default(false)
+  version             Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  customer      CustomerProfile        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  service       Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  package       Package?               @relation(fields: [packageId], references: [id], onDelete: Restrict)
-  location      Location               @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  resource      Resource?              @relation(fields: [resourceId], references: [id], onDelete: Restrict)
-  enquiry       EventEnquiry?          @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
-  quotation     Quotation?             @relation(fields: [quotationId], references: [id], onDelete: SetNull)
-  items         BookingItem[]
-  history       BookingStatusHistory[]
-  notes         BookingNote[]
-  paymentOrders PaymentOrder[]
-  transactions  Transaction[]
-  refunds       Refund[]
-  notifications Notification[]
+  customer           CustomerProfile        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  service            Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  package            Package?               @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  location           Location               @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  resource           Resource?              @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  enquiry            EventEnquiry?          @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  quotation          Quotation?             @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  items              BookingItem[]
+  history            BookingStatusHistory[]
+  notes              BookingNote[]
+  paymentOrders      PaymentOrder[]
+  transactions       Transaction[]
+  refunds            Refund[]
+  notifications      Notification[]
   rescheduleRequests RescheduleRequest[]
+  offer              Offer?                 @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  review             Review?
+  redemption         OfferRedemption?
 
   @@index([brand, status])
   @@index([customerId])
@@ -687,16 +700,16 @@ model EventEnquiry {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  customer   CustomerProfile   @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  category   Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  location   Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  assignedTo User?             @relation("EnquiryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  services   EnquiryService[]
-  quotations Quotation[]
-  followUps  EnquiryFollowUp[]
-  booking    Booking?
+  customer      CustomerProfile     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  category      Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  assignedTo    User?               @relation("EnquiryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  services      EnquiryService[]
+  quotations    Quotation[]
+  followUps     EnquiryFollowUp[]
+  booking       Booking?
   notifications Notification[]
-  attachments EnquiryAttachment[]
+  attachments   EnquiryAttachment[]
 
   @@index([status, createdAt])
   @@index([customerId])
@@ -727,27 +740,27 @@ model EnquiryFollowUp {
 }
 
 model Quotation {
-  id            String          @id @default(cuid())
-  reference     String          @unique
-  enquiryId     String
-  version       Int
-  status        QuotationStatus @default(DRAFT)
-  currency      String          @default("INR")
-  subtotalMinor Int
-  discountMinor Int             @default(0)
-  feesMinor     Int             @default(0)
-  taxMinor      Int
-  totalMinor    Int
-  depositMinor  Int
-  priceBreakdown Json
-  validUntil    DateTime
-  terms         String?
+  id              String          @id @default(cuid())
+  reference       String          @unique
+  enquiryId       String
+  version         Int
+  status          QuotationStatus @default(DRAFT)
+  currency        String          @default("INR")
+  subtotalMinor   Int
+  discountMinor   Int             @default(0)
+  feesMinor       Int             @default(0)
+  taxMinor        Int
+  totalMinor      Int
+  depositMinor    Int
+  priceBreakdown  Json
+  validUntil      DateTime
+  terms           String?
   customerMessage String?
-  createdById   String?
-  sentAt        DateTime?
-  respondedAt   DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdById     String?
+  sentAt          DateTime?
+  respondedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   enquiry   EventEnquiry    @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
   createdBy User?           @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -884,24 +897,24 @@ model Notification {
 }
 
 model PortfolioProject {
-  id          String           @id @default(cuid())
-  brand       Brand
-  slug        String
-  title       String
-  categoryId  String?
-  summary     String
-  body        String
-  coverImage  String
-  coverAlt    String
+  id           String   @id @default(cuid())
+  brand        Brand
+  slug         String
+  title        String
+  categoryId   String?
+  summary      String
+  body         String
+  coverImage   String
+  coverAlt     String
   /// Optional video (MP4/WebM URL or /media path). Shown with controls, never autoplayed with sound.
-  videoUrl    String?
+  videoUrl     String?
   /// Client credit, only when the client has authorised it.
   clientCredit String?
-  isSample    Boolean          @default(true)
-  isPublished Boolean          @default(true)
-  sortOrder   Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  isSample     Boolean  @default(true)
+  isPublished  Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   category Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   images   PortfolioImage[]
@@ -1106,15 +1119,15 @@ model SavedService {
 }
 
 model RescheduleRequest {
-  id              String           @id @default(cuid())
-  bookingId       String
-  requestedStart  DateTime
-  reason          String?
-  status          RescheduleStatus @default(PENDING)
-  decidedById     String?
-  decisionNote    String?
-  createdAt       DateTime         @default(now())
-  decidedAt       DateTime?
+  id             String           @id @default(cuid())
+  bookingId      String
+  requestedStart DateTime
+  reason         String?
+  status         RescheduleStatus @default(PENDING)
+  decidedById    String?
+  decisionNote   String?
+  createdAt      DateTime         @default(now())
+  decidedAt      DateTime?
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -1143,4 +1156,94 @@ model NotificationTemplate {
   body      String
   isActive  Boolean  @default(true)
   updatedAt DateTime @updatedAt
+}
+
+// --- Ratings & reviews ---------------------------------------------------------------
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+/// One review per completed booking, written by the customer who made it.
+model Review {
+  id           String       @id @default(cuid())
+  bookingId    String       @unique
+  serviceId    String
+  customerId   String
+  /// 1–5 (enforced by a check constraint)
+  rating       Int
+  comment      String?
+  status       ReviewStatus @default(PUBLISHED)
+  hiddenReason String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  booking  Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service  Service         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, status, createdAt])
+}
+
+// --- Offers & coupon codes -------------------------------------------------------------
+enum DiscountType {
+  PERCENT
+  FLAT
+}
+
+model Offer {
+  id               String       @id @default(cuid())
+  /// Uppercase code customers type at checkout
+  code             String       @unique
+  title            String
+  description      String?
+  terms            String?
+  discountType     DiscountType
+  /// Basis points for PERCENT (1000 = 10%), paise for FLAT
+  value            Int
+  maxDiscountMinor Int?
+  minOrderMinor    Int          @default(0)
+  validFrom        DateTime?
+  validUntil       DateTime?
+  /// Total redemptions allowed (null = unlimited)
+  usageLimit       Int?
+  perCustomerLimit Int?         @default(1)
+  isActive         Boolean      @default(true)
+  /// List on the website's Offers section (otherwise code-only)
+  showOnSite       Boolean      @default(true)
+  imageKey         String?
+  isDemo           Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  services    OfferService[]
+  redemptions OfferRedemption[]
+  bookings    Booking[]
+}
+
+/// Restricts an offer to specific services (no rows = all services).
+model OfferService {
+  offerId   String
+  serviceId String
+
+  offer   Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([offerId, serviceId])
+}
+
+model OfferRedemption {
+  id            String   @id @default(cuid())
+  offerId       String
+  bookingId     String   @unique
+  customerId    String
+  discountMinor Int
+  createdAt     DateTime @default(now())
+
+  offer    Offer           @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  booking  Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId])
+  @@index([customerId, offerId])
 }

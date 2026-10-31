@@ -15,21 +15,33 @@ function nextLabel(n: NonNullable<StudioServiceCard['nextAvailable']>, today: st
   return `${day}, ${n.startTime}`;
 }
 
-/** Poster-style card used in rails and grids. Availability is the real next free slot, or nothing. */
+/**
+ * Poster card (BookMyShow layout). The strip under the image shows the real
+ * average rating when published reviews exist, otherwise the price; it never
+ * shows an invented score.
+ */
 export function ServiceCard({ s, today, priority }: { s: StudioServiceCard; today: string; priority?: boolean }) {
   const badge = s.categories[0]?.name;
+  const r = s.rating;
   return (
     <article className="st-card">
-      <div style={{ position: 'relative' }}>
+      <div className="st-card__poster">
         <Link href={`/service/${s.slug}`} tabIndex={-1} aria-hidden="true">
           <SampleImage imageKey={s.imageKey} ratio="3x4" sizes="(min-width: 1000px) 18vw, (min-width: 640px) 30vw, 46vw" priority={priority} alt="" />
         </Link>
         {badge && <span className="st-card__badge">{badge}</span>}
         <SaveButton serviceId={s.id} serviceName={s.name} />
+        <div className="st-card__strip">
+          {r ? (
+            <span><span className="star" aria-hidden="true">★</span> {r.average.toFixed(1)}/5 <span className="muted">· {r.count} {r.count === 1 ? 'review' : 'reviews'}</span></span>
+          ) : (
+            <span>{priceLabel(s)}</span>
+          )}
+        </div>
       </div>
-      <h3 className="st-card__title"><Link href={`/service/${s.slug}`} style={{ textDecoration: 'none' }}>{s.name}</Link></h3>
-      <p className="st-card__meta">{s.summary}</p>
-      <p className="st-card__price">{priceLabel(s)}</p>
+      <h3 className="st-card__title"><Link href={`/service/${s.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>{s.name}</Link></h3>
+      <p className="st-card__meta">{s.categories.map((c) => c.name).join('/') || s.summary}</p>
+      {r && <p className="st-card__price">{priceLabel(s)}</p>}
       {s.bookingMode === 'ENQUIRY' ? (
         <span className="st-avail st-avail--request">Quotation on request</span>
       ) : s.nextAvailable ? (

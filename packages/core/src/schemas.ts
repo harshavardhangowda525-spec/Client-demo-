@@ -31,6 +31,7 @@ export const quoteRequestSchema = z.object({
   addOnIds: z.array(id).max(20).default([]),
   durationMin: z.coerce.number().int().positive().max(24 * 60).optional().nullable(),
   locationId: id.optional().nullable(),
+  couponCode: z.string().trim().max(20).optional().nullable(),
 });
 
 export const availabilityQuerySchema = z.object({
@@ -57,6 +58,7 @@ export const createBookingSchema = z.object({
   acceptTerms: z.literal(true, { message: 'Please accept the booking terms' }),
   /** Website the booking is made on, when it differs from the service's own site. */
   sourceSite: z.enum(['STUDIO']).optional(),
+  couponCode: z.string().trim().max(20).optional().nullable().or(z.literal('').transform(() => null)),
 });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 

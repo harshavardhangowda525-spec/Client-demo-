@@ -1,7 +1,8 @@
 import { prisma, type Db, type Service, type Package, type AddOn } from '@studio/db';
 import { DomainError, invalid, notFound } from '../errors';
 import { getSetting } from '../settings';
-import { calculatePrice, type PriceBreakdown } from './engine';
+import { calculatePrice, type PriceBreakdown, type PricingInput } from './engine';
+import { evaluateCoupon } from '../offers/service';
 
 export interface QuoteRequest {
   serviceId: string;
@@ -9,6 +10,10 @@ export interface QuoteRequest {
   addOnIds?: string[];
   durationMin?: number | null;
   locationId?: string | null;
+  /** Optional coupon; validated and priced on the server. */
+  couponCode?: string | null;
+  /** Known customer, so per-customer coupon limits apply. */
+  customerId?: string | null;
 }
 
 export interface ResolvedQuote {
@@ -17,6 +22,7 @@ export interface ResolvedQuote {
   addOns: AddOn[];
   durationMin: number;
   breakdown: PriceBreakdown;
+  offer: { id: string; code: string; title: string } | null;
 }
 
 /** Validate a requested duration against a service's rules. */
@@ -77,7 +83,7 @@ export async function quoteService(req: QuoteRequest, db: Db = prisma): Promise<
   const durationMin = resolveDuration(service, pkg, req.durationMin);
   const [pricing, regional] = await Promise.all([getSetting('pricing', db), getSetting('regional', db)]);
 
-  const breakdown = calculatePrice({
+  const input: PricingInput = {
     currency: regional.currency,
     durationMin,
     base: pkg
@@ -91,7 +97,15 @@ export async function quoteService(req: QuoteRequest, db: Db = prisma): Promise<
     fees: pricing.fees,
     depositBps: service.depositBpsOverride ?? pricing.depositBps,
     minimumDepositMinor: pricing.minimumDepositMinor,
-  });
+  };
+  let breakdown = calculatePrice(input);
+  let offer: ResolvedQuote['offer'] = null;
+  if (req.couponCode?.trim()) {
+    // Discounts apply to the service and add-ons, before fees and tax.
+    const { offer: o, discountMinor } = await evaluateCoupon(req.couponCode, { serviceId: service.id, subtotalMinor: breakdown.subtotalMinor, customerId: req.customerId }, db);
+    breakdown = calculatePrice({ ...input, discountMinor, discountLabel: `Offer ${o.code}` });
+    offer = { id: o.id, code: o.code, title: o.title };
+  }
 
-  return { service, pkg, addOns, durationMin, breakdown };
+  return { service, pkg, addOns, durationMin, breakdown, offer };
 }

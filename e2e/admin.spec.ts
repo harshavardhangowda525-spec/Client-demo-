@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { SITES, uniqueEmail } from './helpers';
+import { SITES, pickFirstDay, uniqueEmail } from './helpers';
 
 // Sign in once per account and reuse the session: the auth endpoints are
 // rate limited (8 sign-ins per minute per IP), which repeated runs would trip.
@@ -40,8 +40,7 @@ test.describe('Admin panel', () => {
     const email = uniqueEmail('request');
     await site.goto(`${SITES.photo}/book?service=corporate-video`);
     await site.getByRole('button', { name: 'Continue to date & time' }).click();
-    await site.waitForFunction(() => !document.querySelector('.calendar[aria-busy="true"]'));
-    await site.locator('.calendar__day[data-available="true"]').first().click();
+    await pickFirstDay(site);
     await site.locator('.slot').first().click();
     await site.getByRole('button', { name: 'Continue' }).click();
     await site.getByLabel('Full name').fill('Request Customer');
@@ -119,5 +118,18 @@ test.describe('Admin panel', () => {
     await first.getByLabel('Subject').fill('Hello {{notAVariable}}');
     await first.getByRole('button', { name: 'Save template' }).click();
     await expect(page.getByRole('status')).toContainText('Unknown placeholder');
+  });
+
+  test('offers, reviews and e-ticket check-in pages', async ({ page }) => {
+    await signIn(page, 'admin@demo.example', 'DemoAdmin!2026');
+    await page.getByRole('navigation').first().getByRole('link', { name: 'Offers & coupons' }).click();
+    await expect(page.getByRole('heading', { name: 'Offers & coupons' })).toBeVisible();
+    await expect(page.locator('tbody')).toContainText('DEMO10');
+    await page.getByRole('navigation').first().getByRole('link', { name: 'Ratings & reviews' }).click();
+    await expect(page.getByRole('heading', { name: 'Ratings & reviews' })).toBeVisible();
+    await page.getByRole('navigation').first().getByRole('link', { name: 'Check-in' }).click();
+    await page.getByLabel('Ticket code').fill('PH-ABCDEFGH.AAAAAAAAAA');
+    await page.getByRole('button', { name: 'Check in' }).click();
+    await expect(page.locator('main .alert--danger')).toContainText('not a valid ticket');
   });
 });

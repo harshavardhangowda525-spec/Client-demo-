@@ -81,7 +81,7 @@ services:
     plan: free
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-photo exec next build
-    startCommand: cd apps/web-photo && ./node_modules/.bin/next start -p $PORT
+    startCommand: cd apps/web-photo && ./node_modules/.bin/next start -H 0.0.0.0 -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls
 
@@ -91,7 +91,7 @@ services:
     plan: free
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-podcast exec next build
-    startCommand: cd apps/web-podcast && ./node_modules/.bin/next start -p $PORT
+    startCommand: cd apps/web-podcast && ./node_modules/.bin/next start -H 0.0.0.0 -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls
 
@@ -101,7 +101,7 @@ services:
     plan: free
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-events exec next build
-    startCommand: cd apps/web-events && ./node_modules/.bin/next start -p $PORT
+    startCommand: cd apps/web-events && ./node_modules/.bin/next start -H 0.0.0.0 -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls
 
@@ -111,7 +111,7 @@ services:
     plan: free
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/web-studio exec next build
-    startCommand: cd apps/web-studio && ./node_modules/.bin/next start -p $PORT
+    startCommand: cd apps/web-studio && ./node_modules/.bin/next start -H 0.0.0.0 -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls
 
@@ -121,6 +121,6 @@ services:
     plan: free
     region: singapore
     buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile && npx -y pnpm@10.28.0 --filter @studio/admin exec next build
-    startCommand: cd apps/admin && ./node_modules/.bin/next start -p $PORT
+    startCommand: cd apps/admin && ./node_modules/.bin/next start -H 0.0.0.0 -p $PORT
     envVars:
       - fromGroup: infinity-demo-urls

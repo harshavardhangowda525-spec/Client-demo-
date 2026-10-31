@@ -9,6 +9,7 @@ import { getSetting } from '../settings';
 import { addDays, compareLocalDates, hhmmToMinutes, parseLocalDate, todayIn, utcToZoned, zonedToUtc, type LocalDate } from '../time';
 import { createBookingSchema, rescheduleSchema, type CreateBookingInput } from '../schemas';
 import { quoteService } from '../pricing/service';
+import { evaluateCoupon, lockOffer } from '../offers/service';
 import type { PriceBreakdown } from '../pricing/engine';
 import { expireStaleHolds, loadAvailabilityContext } from '../availability/service';
 import { windowFitsResource } from '../availability/engine';
@@ -160,7 +161,7 @@ export async function createBooking(
   if (!location || !location.isActive || !location.brands.includes(input.brand)) throw notFound('Location');
 
   const quote = await quoteService(
-    { serviceId: input.serviceId, packageId: input.packageId, addOnIds: input.addOnIds, durationMin: input.durationMin, locationId: location.id },
+    { serviceId: input.serviceId, packageId: input.packageId, addOnIds: input.addOnIds, durationMin: input.durationMin, locationId: location.id, couponCode: input.couponCode },
     db,
   );
   if (quote.service.brand !== input.brand) throw notFound('Service');
@@ -198,6 +199,13 @@ export async function createBooking(
           throw new DomainError('CONFLICT', `You already have ${active} upcoming bookings. Please contact the team to book more sessions.`);
         }
       }
+      if (quote.offer) {
+        // Re-check limits now that the customer is known, under a lock so the
+        // last available use of a coupon can't be taken twice.
+        await lockOffer(tx, quote.offer.id);
+        const again = await evaluateCoupon(quote.offer.code, { serviceId: quote.service.id, subtotalMinor: breakdown.subtotalMinor, customerId: customer.id }, tx, now);
+        if (again.discountMinor !== breakdown.discountMinor) throw new DomainError('CONFLICT', 'This offer changed while you were booking. Please review the price and try again.');
+      }
 
       return tx.booking.create({
         data: {
@@ -233,8 +241,10 @@ export async function createBooking(
           contactEmail: input.contact.email,
           contactPhone: input.contact.phone ?? null,
           customerNotes: input.notes || null,
+          offerId: quote.offer?.id ?? null,
           isDemo: opts.isDemo ?? false,
           items: { create: bookingItemsFromBreakdown(breakdown) },
+          ...(quote.offer ? { redemption: { create: { offerId: quote.offer.id, customerId: customer.id, discountMinor: breakdown.discountMinor } } } : {}),
           history: {
             create: {
               fromStatus: null,
@@ -281,6 +291,8 @@ export async function getBookingForViewer(reference: string, viewer: Viewer, db:
       transactions: { orderBy: { createdAt: 'desc' } },
       customer: true,
       rescheduleRequests: { orderBy: { createdAt: 'desc' }, take: 5 },
+      review: true,
+      offer: { select: { code: true, title: true } },
     },
   });
   if (!booking) throw notFound('Booking');
