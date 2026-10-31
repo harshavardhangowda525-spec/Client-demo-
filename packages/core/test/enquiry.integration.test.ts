@@ -49,9 +49,10 @@ describe('event enquiries', () => {
       ],
       discountMinor: 0,
     }, admin);
-    // Server computes totals (client-supplied totalMinor is ignored): 10,000 + 120,000 = 130,000 INR + 18%.
+    // Server computes totals (client-supplied totalMinor is ignored): 10,000 + 120,000 = 130,000 INR,
+    // + 2% sample convenience fee = 132,600, + 18% = 156,468.
     expect(draft.subtotalMinor).toBe(13_000_000);
-    expect(draft.totalMinor).toBe(15_340_000);
+    expect(draft.totalMinor).toBe(15_646_800);
     expect(draft.status).toBe('DRAFT');
 
     // Cannot convert before acceptance.
@@ -68,7 +69,7 @@ describe('event enquiries', () => {
 
     const { booking } = await convertQuotationToBooking(draft.id, { serviceId: I.corporateEvents, locationId: I.garden, date: futureWeekday(40), startTime: '10:00', durationMin: 480 }, admin);
     expect(booking.status).toBe('AWAITING_PAYMENT');
-    expect(booking.totalMinor).toBe(15_340_000);
+    expect(booking.totalMinor).toBe(15_646_800); // same total as the accepted quotation
     expect(booking.quotationId).toBe(draft.id);
     expect((await prisma.eventEnquiry.findUniqueOrThrow({ where: { id: enquiry.id } })).status).toBe('CONVERTED');
 

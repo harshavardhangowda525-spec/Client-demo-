@@ -49,7 +49,7 @@ describe('public API', () => {
   it('quotes ignore any client-supplied price', async () => {
     const res = await post('/api/v1/quotes', { serviceId: multicamId, totalMinor: 1, priceMinor: 1 });
     expect(res.statusCode).toBe(200);
-    expect(json(res).totalMinor).toBe(1_416_000);
+    expect(json(res).totalMinor).toBe(1_444_320); // 12,000 + 2% sample fee + 18% sample tax
   });
 
   it('returns structured validation errors', async () => {

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import '@fontsource-variable/manrope';
+import '@fontsource-variable/roboto';
 import '@studio/ui/styles.css';
 import './theme.css';
 import { DemoBar } from '@studio/ui';
@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: '#1c1d2b' };
+export const viewport: Viewport = { themeColor: '#ffffff' };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [config, categories, me] = await Promise.all([getSiteConfig(BRAND), serverApi<StudioCategory[]>('/api/v1/studio/categories'), getMe()]);

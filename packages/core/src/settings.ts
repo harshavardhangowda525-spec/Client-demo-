@@ -92,7 +92,8 @@ export const DEFAULT_SETTINGS: Settings = {
   pricing: {
     taxRateBps: 1800,
     taxLabel: 'GST (sample rate, 18%)',
-    fees: [],
+    // Sample only: the business sets its own convenience fee (or none) in Configuration.
+    fees: [{ code: 'CONVENIENCE', label: 'Convenience fee (sample, 2%)', type: 'PERCENT', value: 200 }],
     depositBps: 3000,
     minimumDepositMinor: 0,
     quotationValidityDays: 14,

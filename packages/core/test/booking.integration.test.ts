@@ -24,10 +24,12 @@ describe('booking creation', () => {
     const { booking, accessToken } = await createBooking({ ...multicam(), totalMinor: 1, price: 1 }, null);
     expect(booking.status).toBe('AWAITING_PAYMENT');
     expect(booking.paymentStatus).toBe('UNPAID');
-    // 12,000 INR fixed + 18% sample tax; client-supplied price fields are ignored.
+    // 12,000 INR fixed + 2% sample convenience fee (240) = 12,240, + 18% sample tax = 14,443.20.
+    // Client-supplied price fields are ignored.
     expect(booking.subtotalMinor).toBe(1_200_000);
-    expect(booking.totalMinor).toBe(1_416_000);
-    expect(booking.depositMinor).toBe(424_800);
+    expect(booking.feesMinor).toBe(24_000);
+    expect(booking.totalMinor).toBe(1_444_320);
+    expect(booking.depositMinor).toBe(433_296); // 30% of the total
     expect(booking.holdExpiresAt).not.toBeNull();
     expect(booking.reference).toMatch(/^PC-/);
     expect(accessToken.length).toBeGreaterThan(20);

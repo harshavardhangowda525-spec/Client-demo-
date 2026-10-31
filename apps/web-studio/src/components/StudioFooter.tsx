@@ -58,7 +58,7 @@ export function StudioFooter({ site, categories }: { site: { name: string; tagli
         </div>
         <div className="st-footer__legal">
           <p>Demonstration platform built by Infinity Web &amp; Apps. Services, prices, locations, equipment and imagery are sample content.</p>
-          <p>Payments on this demo are simulated.</p>
+          <p>Payments on this demo are simulated or run in Razorpay test mode; no money is taken.</p>
         </div>
       </div>
     </footer>

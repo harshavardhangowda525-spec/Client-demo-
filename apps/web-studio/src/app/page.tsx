@@ -3,8 +3,9 @@ import { FaqList, formatDuration, formatMoney } from '@studio/ui';
 import { resolveImage, SampleImage, serverApi } from '@studio/ui/server';
 import { HeroCarousel } from '../components/HeroCarousel';
 import { Gallery } from '../components/Lightbox';
+import { OfferCard } from '../components/OfferCard';
 import { Rail } from '../components/Rail';
-import { priceLabel, ServiceCard } from '../components/ServiceCard';
+import { ServiceCard } from '../components/ServiceCard';
 import { getCity } from '../lib/city';
 import { todayIn } from '../lib/today';
 import type { StudioHome } from '../lib/types';
@@ -26,7 +27,7 @@ export default async function Home() {
             ctaLabel: b.ctaLabel,
             ctaHref: b.ctaHref,
             offerText: b.offerText,
-            media: <SampleImage imageKey={b.imageKey} alt={b.imageAlt ?? ''} ratio="auto" sizes="(min-width: 1240px) 1200px, 100vw" priority={i === 0} />,
+            media: <SampleImage imageKey={b.imageKey} alt={b.imageAlt ?? ''} ratio="auto" sizes="(min-width: 1240px) 1240px, 100vw" priority={i === 0} />,
           }))}
         />
         {!home.banners.length && (
@@ -37,32 +38,46 @@ export default async function Home() {
         )}
       </div>
 
-      {/* B. Popular services */}
+      {/* Recommended (ranked by real bookings) */}
       <section className="st-section" aria-labelledby="popular">
         <div className="container">
           <div className="st-section__head">
-            <h2 id="popular">Popular services{city ? ` in ${city}` : ''}</h2>
-            <Link href="/services?sort=popular">See all ›</Link>
+            <h2 id="popular">Recommended services{city ? ` in ${city}` : ''}</h2>
+            <Link href="/services?sort=popular">See all</Link>
           </div>
           {home.popular.length ? (
-            <Rail label="Popular services">
+            <Rail label="Recommended services">
               {home.popular.map((s, i) => <ServiceCard key={s.id} s={s} today={today} priority={i < 2} />)}
             </Rail>
           ) : (
             <div className="empty">No services are available{city ? ` in ${city}` : ''} yet. <Link href="/services">Browse all services</Link>.</div>
           )}
-          <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>Order reflects bookings made in the last 90 days. &ldquo;Next free&rdquo; times come from the live booking calendar.</p>
         </div>
       </section>
 
-      {/* C. Categories */}
+      {/* Offers */}
+      {home.offers.length > 0 && (
+        <section className="st-section" aria-labelledby="offers" style={{ paddingTop: 0 }}>
+          <div className="container">
+            <div className="st-section__head">
+              <h2 id="offers">Offers for you</h2>
+              <Link href="/offers">All offers</Link>
+            </div>
+            <div className="st-offers">
+              {home.offers.slice(0, 3).map((o) => <OfferCard key={o.id} offer={o} />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Categories */}
       <section className="st-section st-band" aria-labelledby="cats">
         <div className="container">
-          <div className="st-section__head"><h2 id="cats">Browse by category</h2></div>
+          <div className="st-section__head"><h2 id="cats">Explore by category</h2></div>
           <div className="st-tiles">
             {home.categories.map((c) => (
               <Link key={c.id} href={`/services/${c.slug}`} className="st-tile">
-                <SampleImage imageKey={c.imageKey} alt="" ratio="auto" sizes="(min-width: 1100px) 14vw, (min-width: 760px) 25vw, 50vw" />
+                <SampleImage imageKey={c.imageKey} alt="" ratio="auto" sizes="(min-width: 1100px) 12vw, (min-width: 760px) 25vw, 50vw" />
                 <span>{c.name}<small>{c.serviceCount} {c.serviceCount === 1 ? 'service' : 'services'}</small></span>
               </Link>
             ))}
@@ -70,34 +85,55 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* D. Featured */}
+      {/* Featured: dark "premiere" band */}
       {home.featured.length > 0 && (
-        <section className="st-section" aria-labelledby="featured">
+        <section className="st-section st-dark" aria-labelledby="featured">
           <div className="container">
-            <div className="st-section__head"><h2 id="featured">Featured services</h2></div>
-            <div className="grid grid--3">
-              {home.featured.map((s) => (
-                <Link key={s.id} href={`/service/${s.slug}`} className="st-panel card--link" style={{ textDecoration: 'none', display: 'grid', gap: 'var(--space-3)', padding: 0, overflow: 'hidden' }}>
-                  <SampleImage imageKey={s.imageKey} alt="" ratio="16x9" sizes="(min-width: 900px) 33vw, 100vw" />
-                  <div style={{ padding: '0 var(--space-5) var(--space-5)', display: 'grid', gap: 'var(--space-2)' }}>
-                    <span className="small muted">{s.categories.map((c) => c.name).join(' · ')}</span>
-                    <h3 style={{ margin: 0, fontSize: 'var(--step-1)' }}>{s.name}</h3>
-                    <p className="small muted" style={{ margin: 0 }}>{s.summary}</p>
-                    <p style={{ margin: 0, fontWeight: 700 }}>{priceLabel(s)}</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="st-section__head">
+              <div>
+                <h2 id="featured">Featured this week</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>Hand-picked by the studio team</p>
+              </div>
+              <Link href="/services">See all</Link>
             </div>
+            <Rail label="Featured services">
+              {home.featured.map((s) => <ServiceCard key={s.id} s={s} today={today} />)}
+            </Rail>
           </div>
         </section>
       )}
 
-      {/* E. Studio & equipment */}
+      {/* Packages */}
+      {home.packages.length > 0 && (
+        <section className="st-section" aria-labelledby="pkgs">
+          <div className="container">
+            <div className="st-section__head">
+              <h2 id="pkgs">Popular packages</h2>
+              <Link href="/packages">All packages</Link>
+            </div>
+            {home.pricing.isSample && <p className="badge badge--demo" style={{ marginBottom: 'var(--space-4)' }}>Sample prices</p>}
+            <Rail label="Packages">
+              {home.packages.map((p) => (
+                <div key={p.id} className="st-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  <span className="small muted">{p.service.name}</span>
+                  <h3 style={{ margin: 0, fontSize: '1.02rem' }}>{p.name}</h3>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.2rem' }}>{formatMoney(p.priceMinor)}</p>
+                  <p className="small muted" style={{ margin: 0 }}>{formatDuration(p.durationMin)} · plus {home.pricing.taxLabel}</p>
+                  <ul className="small" style={{ paddingLeft: '1.1em', margin: 0 }}>{p.includes.slice(0, 4).map((x) => <li key={x}>{x}</li>)}</ul>
+                  <Link className="btn btn--sm" style={{ marginTop: 'auto' }} href={`/service/${p.service.slug}/slots?package=${p.id}`}>Book</Link>
+                </div>
+              ))}
+            </Rail>
+          </div>
+        </section>
+      )}
+
+      {/* Studios & equipment */}
       <section className="st-section st-band" aria-labelledby="facilities">
         <div className="container">
           <div className="st-section__head">
-            <h2 id="facilities">Studio &amp; equipment</h2>
-            <Link href="/studio">Studio details ›</Link>
+            <h2 id="facilities">Studios &amp; equipment</h2>
+            <Link href="/studio">Studio details</Link>
           </div>
           {!verifiedEquipment && home.equipment.length > 0 && (
             <p className="alert alert--info small">Equipment listed here is generic sample data awaiting confirmation by the studio. Exact models will be shown once verified.</p>
@@ -119,34 +155,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* F. Packages */}
-      {home.packages.length > 0 && (
-        <section className="st-section" aria-labelledby="pkgs">
-          <div className="container">
-            <div className="st-section__head">
-              <h2 id="pkgs">Packages</h2>
-              <Link href="/packages">All packages ›</Link>
-            </div>
-            {home.pricing.isSample && <p className="badge badge--demo" style={{ marginBottom: 'var(--space-4)' }}>Sample prices</p>}
-            <Rail label="Packages">
-              {home.packages.map((p) => (
-                <div key={p.id} className="st-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <span className="small muted">{p.service.name}</span>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{p.name}</h3>
-                  <p style={{ margin: 0, fontWeight: 800, fontSize: '1.2rem' }}>{formatMoney(p.priceMinor)}</p>
-                  <p className="small muted" style={{ margin: 0 }}>{formatDuration(p.durationMin)} · plus {home.pricing.taxLabel}</p>
-                  <ul className="small" style={{ paddingLeft: '1.1em', margin: 0 }}>{p.includes.slice(0, 4).map((x) => <li key={x}>{x}</li>)}</ul>
-                  {p.service.addOns.length > 0 && <p className="small muted" style={{ margin: 0 }}>Optional add-ons: {p.service.addOns.slice(0, 3).join(', ')}</p>}
-                  <Link className="btn btn--sm" style={{ marginTop: 'auto' }} href={`/service/${p.service.slug}?package=${p.id}`}>Choose package</Link>
-                </div>
-              ))}
-            </Rail>
-          </div>
-        </section>
-      )}
-
-      {/* G. Why book with us: only claims the platform actually delivers */}
-      <section className="st-section st-band" aria-labelledby="why">
+      {/* Why book here: only claims the platform actually delivers */}
+      <section className="st-section" aria-labelledby="why">
         <div className="container">
           <div className="st-section__head"><h2 id="why">Why book here</h2></div>
           <div className="st-highlights">
@@ -161,18 +171,18 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* H. Portfolio */}
+      {/* Recent work */}
       {home.portfolio.length > 0 && (
-        <section className="st-section" aria-labelledby="work">
+        <section className="st-section st-band" aria-labelledby="work">
           <div className="container">
             <div className="st-section__head">
               <h2 id="work">Recent work</h2>
-              <Link href="/portfolio">Full portfolio ›</Link>
+              <Link href="/portfolio">Full portfolio</Link>
             </div>
             <Rail label="Recent work">
               {home.portfolio.map((p) => (
                 <Link key={p.id} href={`/portfolio#${p.slug}`} className="st-card">
-                  <SampleImage imageKey={p.coverImage} alt={p.coverAlt} ratio="4x3" sizes="(min-width: 1000px) 18vw, 46vw" />
+                  <div className="st-card__poster"><SampleImage imageKey={p.coverImage} alt={p.coverAlt} ratio="4x3" sizes="(min-width: 1000px) 18vw, 46vw" /></div>
                   <span className="st-card__title">{p.title}</span>
                   <span className="st-card__meta">{p.category?.name}{p.videoUrl ? ' · Video' : ''}</span>
                 </Link>
@@ -183,9 +193,9 @@ export default async function Home() {
         </section>
       )}
 
-      {/* I. Testimonials: rendered only when authorised testimonials exist */}
+      {/* Testimonials: rendered only when authorised testimonials exist */}
       {home.testimonials.length > 0 && (
-        <section className="st-section st-band" aria-labelledby="reviews">
+        <section className="st-section" aria-labelledby="reviews">
           <div className="container">
             <div className="st-section__head"><h2 id="reviews">What clients say</h2></div>
             <div className="grid grid--3">
@@ -200,13 +210,13 @@ export default async function Home() {
         </section>
       )}
 
-      {/* J. FAQs */}
+      {/* FAQs */}
       {home.faqs.length > 0 && (
         <section className="st-section" aria-labelledby="faq">
           <div className="container container--narrow" style={{ marginInline: 'auto' }}>
             <div className="st-section__head">
               <h2 id="faq">Frequently asked questions</h2>
-              <Link href="/faqs">All FAQs ›</Link>
+              <Link href="/faqs">All FAQs</Link>
             </div>
             {home.faqs.some((f) => f.isDemo) && <p className="badge badge--demo" style={{ marginBottom: 'var(--space-4)' }}>Sample answers for demonstration</p>}
             <FaqList faqs={home.faqs.slice(0, 5)} />
@@ -219,7 +229,7 @@ export default async function Home() {
           <div className="st-panel cluster" style={{ justifyContent: 'space-between', background: 'var(--ink)', color: '#fff', border: 0 }}>
             <div>
               <h2 id="cta" style={{ color: '#fff', margin: 0 }}>Planning something bigger?</h2>
-              <p style={{ color: 'var(--ink-text)', margin: 0 }}>Send a brief with references and we&rsquo;ll prepare a custom quotation.</p>
+              <p style={{ color: 'var(--ink-text)', margin: 0 }}>Campaigns, events and multi-day shoots: send a brief and get a custom quotation.</p>
             </div>
             <Link href="/enquire" className="btn btn--light">Request a quote</Link>
           </div>

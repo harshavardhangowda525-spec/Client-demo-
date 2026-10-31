@@ -1,17 +1,18 @@
 import Link from 'next/link';
 import { getMe, serverApi } from '@studio/ui/server';
-import { getCity } from '../lib/city';
+import { getCity, hasChosenCity } from '../lib/city';
 import type { StudioCategory } from '../lib/types';
 import { CategoryBar } from './CategoryBar';
 import { CityPicker } from './CityPicker';
 import { SearchBox } from './SearchBox';
 
 export async function StudioHeader({ siteName }: { siteName: string }) {
-  const [me, cities, categories, city] = await Promise.all([
+  const [me, cities, categories, city, chosen] = await Promise.all([
     getMe(),
     serverApi<{ cities: string[] }>('/api/v1/studio/cities'),
     serverApi<StudioCategory[]>('/api/v1/studio/categories'),
     getCity(),
+    hasChosenCity(),
   ]);
   const firstName = me?.profile.fullName.split(' ')[0];
   return (
@@ -24,9 +25,12 @@ export async function StudioHeader({ siteName }: { siteName: string }) {
           </Link>
           <SearchBox className="st-search--desktop" />
           <div className="st-header__actions">
-            <CityPicker cities={cities?.cities ?? []} current={city} />
-            <Link href="/account" className="btn btn--ghost btn--sm st-hide-sm">{firstName ? `Hi, ${firstName}` : 'Sign in'}</Link>
-            <Link href="/services" className="btn btn--sm">Book now</Link>
+            <CityPicker cities={cities?.cities ?? []} current={city} askOnLoad={!chosen && !city} />
+            {firstName ? (
+              <Link href="/account" className="st-city" style={{ textDecoration: 'none' }}>Hi, {firstName}</Link>
+            ) : (
+              <Link href="/account" className="st-signin">Sign in</Link>
+            )}
           </div>
         </div>
         <SearchBox className="st-search--mobile" />
