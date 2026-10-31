@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 // Placeholder credentials: enough to build Google's sign-in URL, never sent to Google.
@@ -16,7 +16,53 @@ afterAll(async () => {
   await app?.close();
 });
 
+const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+
+/** Runs the whole round trip, with Google's token endpoint answered locally. */
+async function googleRoundTrip(email: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const idToken = `${b64({ alg: 'none' })}.${b64({ iss: 'https://accounts.google.com', aud: process.env.GOOGLE_CLIENT_ID, sub: `sub-${email}-${Date.now()}`, email, email_verified: true, name: 'Google User', exp: now + 3600, iat: now })}.sig`;
+  const realFetch = globalThis.fetch;
+  vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.startsWith('https://oauth2.googleapis.com/token')) {
+      return new Response(JSON.stringify({ access_token: 'at', id_token: idToken, expires_in: 3600, token_type: 'Bearer', scope: 'openid email profile' }), { headers: { 'content-type': 'application/json' } });
+    }
+    return realFetch(input, init);
+  });
+  const start = await app.inject({
+    method: 'POST', url: '/api/auth/sign-in/social',
+    headers: { origin: 'http://localhost:3004', 'content-type': 'application/json' },
+    payload: { provider: 'google', callbackURL: 'http://localhost:3004/account', errorCallbackURL: 'http://localhost:3004/account?signin=google' },
+  });
+  const state = new URL(h.json(start).url).searchParams.get('state')!;
+  const cookie = ([] as string[]).concat((start.headers['set-cookie'] as string[] | string | undefined) ?? []).map((c) => c.split(';')[0]).join('; ');
+  const cb = await app.inject({ method: 'GET', url: `/api/auth/callback/google?state=${encodeURIComponent(state)}&code=test-code`, headers: { cookie } });
+  return { location: String(cb.headers.location), setCookie: ([] as string[]).concat((cb.headers['set-cookie'] as string[] | string | undefined) ?? []) };
+}
+
 describe('Sign in with Google', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('signs a new customer in and returns them to the studio site', async () => {
+    const email = `google-${Date.now()}@gmail.example`;
+    const { location, setCookie } = await googleRoundTrip(email);
+    expect(location).toBe('http://localhost:3004/account');
+    expect(setCookie.some((c) => c.includes('session_token'))).toBe(true);
+    const { prisma } = await import('@studio/db');
+    const user = await prisma.user.findUniqueOrThrow({ where: { email }, include: { profile: true, accounts: true } });
+    expect(user.role).toBe('customer');
+    expect(user.profile).not.toBeNull();
+    expect(user.accounts.map((a) => a.providerId)).toEqual(['google']);
+  });
+
+  it('refuses Google sign-in for staff, with a reason the page can explain', async () => {
+    const { location } = await googleRoundTrip('staff@demo.example');
+    const url = new URL(location);
+    expect(url.pathname).toBe('/account');
+    expect(url.searchParams.get('error')).toBe('unable_to_link_account');
+  });
+
   it('builds a Google sign-in URL that returns to the studio site', async () => {
     const res = await app.inject({
       method: 'POST', url: '/api/auth/sign-in/social',

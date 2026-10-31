@@ -98,7 +98,7 @@ export async function AccountPage({ brand, searchParams, homeBrands, children, a
         <PageHeader eyebrow="Account" title="Sign in or create an account" lead="One account works across all three websites in this demo." />
         <section className="section">
           <div className="container">
-            <AuthPanel next={one(sp.next)} emailDelivery={site.integrations.emailDelivery} adminUrl={adminUrl()} googleSignIn={!!allowGoogle && !!site.integrations.googleSignIn} oauthError={one(sp.error)} />
+            <AuthPanel next={one(sp.next)} emailDelivery={site.integrations.emailDelivery} adminUrl={adminUrl()} googleSignIn={!!allowGoogle && !!site.integrations.googleSignIn} oauthError={lastValue(sp.error)} />
           </div>
         </section>
       </>
@@ -206,4 +206,9 @@ export function LegalPage({ kind, siteName }: { kind: 'privacy' | 'terms'; siteN
       </section>
     </>
   );
+}
+
+/** Better Auth appends its own `error` code; if the URL ends up with several, the last is the real one. */
+function lastValue(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[v.length - 1] : v;
 }
