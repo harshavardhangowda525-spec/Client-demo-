@@ -21,7 +21,7 @@ export function googleErrorMessage(code: string): string {
   const reasons: Record<string, string> = {
     access_denied: 'Google sign-in was cancelled, or this Google account is not allowed to use the app yet (while the app is in testing, only listed test users can sign in).',
     unable_to_link_account: 'This email belongs to a staff account. Staff sign in with a password on the admin panel.',
-    account_not_linked: 'This email belongs to a staff account. Staff sign in with a password on the admin panel.',
+    account_not_linked: 'An account with this email already exists and could not be linked to Google. Sign in with email and password instead.',
     state_mismatch: 'The sign-in session expired or was started in another tab or browser. Please try again.',
     state_not_found: 'The sign-in session expired or was started in another tab or browser. Please try again.',
     state_invalid: 'The sign-in session expired or was started in another tab or browser. Please try again.',

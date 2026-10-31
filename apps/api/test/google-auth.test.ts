@@ -56,6 +56,18 @@ describe('Sign in with Google', () => {
     expect(user.accounts.map((a) => a.providerId)).toEqual(['google']);
   });
 
+  it('links Google to an existing unverified account and removes its unverified password', async () => {
+    const email = `unverified-${Date.now()}@gmail.example`;
+    const signUp = await app.inject({ method: 'POST', url: '/api/auth/sign-up/email', headers: { origin: 'http://localhost:3004', 'content-type': 'application/json' }, payload: { name: 'Pre Registered', email, password: 'SomePassword!2026' } });
+    expect(signUp.statusCode).toBe(200);
+    const { location } = await googleRoundTrip(email);
+    expect(location).toBe('http://localhost:3004/account');
+    const { prisma } = await import('@studio/db');
+    const user = await prisma.user.findUniqueOrThrow({ where: { email }, include: { accounts: true } });
+    expect(user.emailVerified).toBe(true);
+    expect(user.accounts.map((a) => a.providerId)).toEqual(['google']);
+  });
+
   it('refuses Google sign-in for staff, with a reason the page can explain', async () => {
     const { location } = await googleRoundTrip('staff@demo.example');
     const url = new URL(location);

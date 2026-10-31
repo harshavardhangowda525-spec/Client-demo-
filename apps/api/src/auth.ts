@@ -57,7 +57,9 @@ export const auth = betterAuth({
   account: {
     // Google verifies the address, so a customer who first registered with a
     // password can also continue with Google on the same email.
-    accountLinking: { enabled: true, trustedProviders: ['google'] },
+    // Also links to an account whose email was never verified (this demo sends
+    // no verification email); the hook below then removes that unverified password.
+    accountLinking: { enabled: true, trustedProviders: ['google'], requireLocalEmailVerified: false },
   },
   user: {
     additionalFields: {
@@ -94,8 +96,15 @@ export const auth = betterAuth({
         // Staff and admin accounts sign in with a password on the admin panel only.
         before: async (account) => {
           if (account.providerId === 'credential') return;
-          const owner = await prisma.user.findUnique({ where: { id: account.userId }, select: { role: true } });
+          const owner = await prisma.user.findUnique({ where: { id: account.userId }, select: { role: true, emailVerified: true } });
           if (owner && owner.role !== 'customer') return false;
+          // Google proves who owns the email. A password set on an unverified
+          // address may have been added by someone else, so it is removed and
+          // their sessions are ended; the owner can set a new one via reset.
+          if (owner && !owner.emailVerified) {
+            await prisma.account.deleteMany({ where: { userId: account.userId, providerId: 'credential' } });
+            await prisma.session.deleteMany({ where: { userId: account.userId } });
+          }
         },
       },
     },
