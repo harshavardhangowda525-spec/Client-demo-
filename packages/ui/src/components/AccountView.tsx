@@ -16,6 +16,22 @@ export interface AccountBooking {
 export interface AccountEnquiry { reference: string; eventType: string; preferredDate: string; status: string }
 export interface AccountPayment { bookingReference: string; type: string; status: string; amountMinor: number; currency: string; isSimulated: boolean; at: string }
 
+/** Plain-language reason for a failed Google sign-in, with the code for support. */
+export function googleErrorMessage(code: string): string {
+  const reasons: Record<string, string> = {
+    access_denied: 'Google sign-in was cancelled, or this Google account is not allowed to use the app yet (while the app is in testing, only listed test users can sign in).',
+    unable_to_link_account: 'This email belongs to a staff account. Staff sign in with a password on the admin panel.',
+    account_not_linked: 'An account with this email already exists and could not be linked to Google. Sign in with email and password instead.',
+    state_mismatch: 'The sign-in session expired or was started in another tab or browser. Please try again.',
+    state_not_found: 'The sign-in session expired or was started in another tab or browser. Please try again.',
+    state_invalid: 'The sign-in session expired or was started in another tab or browser. Please try again.',
+    invalid_code: 'Google did not accept the website\'s sign-in keys. The site owner should check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+    unable_to_get_user_info: 'Google did not share the account details needed to sign in.',
+    email_not_found: 'Google did not share an email address for this account.',
+  };
+  return `${reasons[code] ?? 'Google sign-in did not complete. Please try again or use email and password.'} (code: ${code})`;
+}
+
 export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true, googleSignIn = false, oauthError }: {
   next?: string;
   emailDelivery: boolean;
@@ -34,7 +50,7 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(
-    oauthError ? 'Google sign-in did not complete. Staff accounts must sign in with a password on the admin panel; customers can try again or use email and password.' : null,
+    oauthError ? googleErrorMessage(oauthError) : null,
   );
   const [info, setInfo] = useState<string | null>(null);
 
@@ -43,7 +59,7 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
     setBusy(true);
     const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/account';
     const res = await api<{ url?: string }>('/api/auth/sign-in/social', {
-      body: { provider: 'google', callbackURL: `${window.location.origin}${safeNext}`, errorCallbackURL: `${window.location.origin}/account?error=google` },
+      body: { provider: 'google', callbackURL: `${window.location.origin}${safeNext}`, errorCallbackURL: `${window.location.origin}/account?signin=google` },
     });
     if (res.ok && res.data.url) {
       window.location.href = res.data.url;
