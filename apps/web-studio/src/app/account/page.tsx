@@ -15,7 +15,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
       ])
     : [null, null, null];
   return (
-    <AccountPage brand={BRAND} searchParams={searchParams} homeBrands={HOME_BRANDS}>
+    <AccountPage brand={BRAND} searchParams={searchParams} homeBrands={HOME_BRANDS} allowGoogle>
       {me && (
         <div className="grid grid--2" style={{ marginTop: 'var(--space-6)', alignItems: 'start' }}>
           <SavedServices initial={saved ?? []} />

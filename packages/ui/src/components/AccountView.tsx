@@ -16,12 +16,16 @@ export interface AccountBooking {
 export interface AccountEnquiry { reference: string; eventType: string; preferredDate: string; status: string }
 export interface AccountPayment { bookingReference: string; type: string; status: string; amountMinor: number; currency: string; isSimulated: boolean; at: string }
 
-export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true }: {
+export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true, googleSignIn = false, oauthError }: {
   next?: string;
   emailDelivery: boolean;
   adminUrl?: string;
   demoAccount?: { email: string; password: string; label: string };
   allowRegister?: boolean;
+  /** Show "Continue with Google" (only on the site Google redirects back to). */
+  googleSignIn?: boolean;
+  /** Error code returned by the sign-in provider, if the last attempt failed. */
+  oauthError?: string;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<'signin' | 'register' | 'forgot'>('signin');
@@ -29,8 +33,25 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    oauthError ? 'Google sign-in did not complete. Staff accounts must sign in with a password on the admin panel; customers can try again or use email and password.' : null,
+  );
   const [info, setInfo] = useState<string | null>(null);
+
+  async function google() {
+    setError(null);
+    setBusy(true);
+    const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/account';
+    const res = await api<{ url?: string }>('/api/auth/sign-in/social', {
+      body: { provider: 'google', callbackURL: `${window.location.origin}${safeNext}`, errorCallbackURL: `${window.location.origin}/account?error=google` },
+    });
+    if (res.ok && res.data.url) {
+      window.location.href = res.data.url;
+      return;
+    }
+    setBusy(false);
+    setError('Google sign-in is not available right now. Please use email and password.');
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +95,15 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
           </button>
         ))}
       </div>
+      {googleSignIn && mode !== 'forgot' && (
+        <div className="stack" style={{ gap: 'var(--space-3)', margin: 'var(--space-4) 0' }}>
+          <button type="button" className="btn btn--ghost btn--block" onClick={google} disabled={busy} style={{ display: 'inline-flex', gap: 10, justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.4 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+            Continue with Google
+          </button>
+          <p className="small muted center" style={{ margin: 0 }}>or use your email</p>
+        </div>
+      )}
       <form className="form" onSubmit={submit} noValidate>
         {mode === 'register' && <TextField id="a-name" label="Full name" autoComplete="name" value={name} onChange={setName} required />}
         <TextField id="a-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} required />

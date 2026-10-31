@@ -90,7 +90,7 @@ export async function EnquiryStatusPage({ searchParams }: { searchParams: Search
   );
 }
 
-export async function AccountPage({ brand, searchParams, homeBrands, children }: { brand: Brand; searchParams: SearchParams; homeBrands?: Brand[]; children?: React.ReactNode }) {
+export async function AccountPage({ brand, searchParams, homeBrands, children, allowGoogle }: { brand: Brand; searchParams: SearchParams; homeBrands?: Brand[]; children?: React.ReactNode; /** Offer Google sign-in (only on the site Google redirects back to). */ allowGoogle?: boolean }) {
   const [sp, site, me] = await Promise.all([searchParams, getSiteConfig(brand), getMe()]);
   if (!me) {
     return (
@@ -98,7 +98,7 @@ export async function AccountPage({ brand, searchParams, homeBrands, children }:
         <PageHeader eyebrow="Account" title="Sign in or create an account" lead="One account works across all three websites in this demo." />
         <section className="section">
           <div className="container">
-            <AuthPanel next={one(sp.next)} emailDelivery={site.integrations.emailDelivery} adminUrl={adminUrl()} />
+            <AuthPanel next={one(sp.next)} emailDelivery={site.integrations.emailDelivery} adminUrl={adminUrl()} googleSignIn={!!allowGoogle && !!site.integrations.googleSignIn} oauthError={one(sp.error)} />
           </div>
         </section>
       </>
