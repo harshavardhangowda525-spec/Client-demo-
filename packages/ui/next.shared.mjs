@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 const monorepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** @returns {import('next').NextConfig} */
-export function createNextConfig({ extraConnectSrc = [] } = {}) {
+export function createNextConfig({ extraConnectSrc = [], allowCamera = false } = {}) {
   const api = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000';
   const isProd = process.env.NODE_ENV === 'production';
 
@@ -30,7 +30,7 @@ export function createNextConfig({ extraConnectSrc = [] } = {}) {
     { key: 'X-Frame-Options', value: 'DENY' },
     // Prevents guest access tokens in URLs from leaking to other origins.
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com")' },
+    { key: 'Permissions-Policy', value: `camera=${allowCamera ? '(self)' : '()'}, microphone=(), geolocation=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com")` },
     { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
     ...(isProd ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }] : []),
   ];

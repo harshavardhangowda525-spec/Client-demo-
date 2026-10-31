@@ -10,19 +10,27 @@ export const SITES = {
 
 export const uniqueEmail = (tag: string) => `e2e-${tag}-${Date.now()}@test.example`;
 
-/** Pick the first available day (moving to next month if needed) and its first slot. */
-export async function pickFirstSlot(page: Page) {
+/**
+ * Click the first available day, moving to the next month when the current one
+ * has none left (e.g. near the end of a month, after the booking lead time).
+ */
+export async function pickFirstDay(page: Page) {
   for (let i = 0; i < 3; i++) {
     const day = page.locator('.calendar__day[data-available="true"]').first();
     await page.waitForFunction(() => !document.querySelector('.calendar[aria-busy="true"]'));
     if (await day.count()) {
       await day.click();
-      await page.locator('.slot').first().click();
       return;
     }
     await page.getByRole('button', { name: 'Next month' }).click();
   }
   throw new Error('No availability found in the next three months');
+}
+
+/** Pick the first available day and its first slot. */
+export async function pickFirstSlot(page: Page) {
+  await pickFirstDay(page);
+  await page.locator('.slot').first().click();
 }
 
 export async function fillGuestDetails(page: Page, email: string) {

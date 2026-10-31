@@ -145,6 +145,11 @@ describe('showtimes-style slot picker', () => {
     expect(st.locations.length).toBeGreaterThan(1);
     expect(st.days.length).toBeGreaterThan(10);
     expect(st.locations.some((l) => l.slots.length > 0)).toBe(true);
+    // A date beyond the first two weeks is shown, not swapped for an earlier one.
+    const later = futureWeekday(25);
+    const far = await getShowtimes('audio-recording', { date: later });
+    expect(far.date).toBe(later);
+    expect(far.days.some((d) => d.date === later)).toBe(true);
     const enquiry = await getShowtimes('brand-and-advertising-shoots', {});
     expect(enquiry.locations).toEqual([]);
   });

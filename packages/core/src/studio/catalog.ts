@@ -2,7 +2,7 @@ import { prisma, type Db, type Prisma } from '@studio/db';
 import { notFound } from '../errors';
 import { getAllSettings, getSetting, STUDIO_BRANDS } from '../settings';
 import { getAvailability } from '../availability/service';
-import { formatLocalDate, minutesToHHMM, todayIn } from '../time';
+import { addDays, formatLocalDate, minutesToHHMM, parseLocalDate, todayIn } from '../time';
 import { publicIntegrationFlags } from '../integrations/status';
 import { ratingSummaries } from '../reviews/service';
 import { listPublicOffers } from '../offers/service';
@@ -378,12 +378,23 @@ export async function getShowtimes(
   const durationMin = pkg ? null : (q.durationMin ?? s.defaultDurationMin);
   const links = s.locations.filter((l) => !q.city || l.location.city.toLowerCase() === q.city.toLowerCase());
   const tz = links[0]?.location.timezone ?? 'Asia/Kolkata';
-  const today = formatLocalDate(todayIn(tz));
+  const todayLocal = todayIn(tz);
+  const today = formatLocalDate(todayLocal);
   const span = Math.min(Math.max(q.days ?? 14, 1), 31);
+  // A requested date beyond the first strip (e.g. a shared link) moves the strip
+  // to start just before it, instead of silently showing a different date.
+  let start = today;
+  if (q.date && /^\d{4}-\d{2}-\d{2}$/.test(q.date) && q.date > formatLocalDate(addDays(todayLocal, span - 1))) {
+    const requested = parseLocalDate(q.date);
+    if (requested) {
+      const from = formatLocalDate(addDays(requested, -3));
+      start = from > today ? from : today;
+    }
+  }
   const results = await Promise.all(
     links.map(async (l) => {
       try {
-        const a = await getAvailability({ serviceId: s.id, locationId: l.locationId, date: today, days: span, packageId: pkg?.id ?? null, durationMin }, db);
+        const a = await getAvailability({ serviceId: s.id, locationId: l.locationId, date: start, days: span, packageId: pkg?.id ?? null, durationMin }, db);
         return { location: l.location, availability: a };
       } catch {
         return { location: l.location, availability: null };
