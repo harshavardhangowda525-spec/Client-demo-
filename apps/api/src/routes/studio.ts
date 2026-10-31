@@ -18,6 +18,12 @@ import {
   searchStudio,
   setSavedService,
   studioCities,
+  getShowtimes,
+  listServiceReviews,
+  listPublicOffers,
+  submitReview,
+  reviewInputSchema,
+  getTicket,
   studioListingQuerySchema,
   updateNotificationPreferences,
   getOwnProfile,
@@ -82,6 +88,45 @@ export function registerStudioRoutes(app: FastifyInstance) {
     },
   });
 
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/studio/services/:slug/showtimes', summary: 'Free start times for a date at every studio offering the service, plus which upcoming days have free times', tags: ['Studio'], access: 'public',
+    params: z.object({ slug: z.string().max(80) }),
+    query: z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), packageId: z.string().max(64).optional(), durationMin: z.coerce.number().int().min(15).max(1440).optional(), city: z.string().max(80).optional() }),
+    rateLimit: { max: 120, timeWindow: '1 minute' },
+    handler: ({ params, query }) => getShowtimes(params.slug, query),
+  });
+
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/studio/services/:slug/reviews', summary: 'Published reviews from customers who completed a booking (rating summary and latest reviews)', tags: ['Studio'], access: 'public',
+    params: z.object({ slug: z.string().max(80) }), query: z.object({ page: z.coerce.number().int().min(1).max(100).default(1) }),
+    handler: async ({ params, query }) => {
+      const s = await prisma.service.findFirst({ where: { slug: params.slug, isActive: true }, select: { id: true } });
+      if (!s) throw new DomainError('NOT_FOUND', 'Service not found.');
+      return listServiceReviews(s.id, { take: 10, skip: (query.page - 1) * 10 });
+    },
+  });
+
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/studio/offers', summary: 'Current offers and coupon codes shown on the website', tags: ['Studio'], access: 'public',
+    handler: () => listPublicOffers(),
+  });
+
+  defineRoute(app, {
+    method: 'POST', url: '/api/v1/bookings/:reference/review', summary: 'Rate and review a booking after the session (one review per booking; resubmitting edits it)', tags: ['Booking'], access: 'public',
+    params: z.object({ reference: z.string().trim().toUpperCase().regex(/^[A-Z]{2}-[0-9A-Z]{8}$/) }), query: tokenQuery,
+    body: reviewInputSchema, status: 201, rateLimit: { max: 10, timeWindow: '10 minutes' },
+    handler: async ({ params, query, body, actor, req, ctx }) => {
+      const r = await submitReview(params.reference, { actor, accessToken: accessTokenFrom(req.headers, query) }, body, ctx);
+      return { rating: r.rating, comment: r.comment, status: r.status };
+    },
+  });
+
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/bookings/:reference/ticket', summary: 'E-ticket with the signed check-in code (confirmed bookings only)', tags: ['Booking'], access: 'public',
+    params: z.object({ reference: z.string().trim().toUpperCase().regex(/^[A-Z]{2}-[0-9A-Z]{8}$/) }), query: tokenQuery,
+    handler: ({ params, query, actor, req }) => getTicket(params.reference, { actor, accessToken: accessTokenFrom(req.headers, query) }),
+  });
+
   // --- Project enquiries ------------------------------------------------------------
   defineRoute(app, {
     method: 'POST', url: '/api/v1/studio/enquiries', summary: 'Submit a project brief for a custom quotation (not a booking)', tags: ['Studio'], access: 'public',
@@ -90,9 +135,9 @@ export function registerStudioRoutes(app: FastifyInstance) {
       // The enquiry belongs to the website brand of the requested services.
       const services = body.serviceIds.length ? await prisma.service.findMany({ where: { id: { in: body.serviceIds } }, select: { brand: true } }) : [];
       const brands = [...new Set(services.map((s) => s.brand))];
-      if (brands.length > 1) throw new DomainError('VALIDATION', 'Please send separate briefs for photography/video and podcast services.');
-      const brand = (brands[0] ?? 'PHOTO') as 'PHOTO' | 'PODCAST';
-      if (brand !== 'PHOTO' && brand !== 'PODCAST') throw new DomainError('VALIDATION', 'One or more requested services are unavailable.');
+      if (brands.length > 1) throw new DomainError('VALIDATION', 'Please send a separate brief for each type of service (photography & video, podcast, or events).');
+      const brand = (brands[0] ?? 'PHOTO') as 'PHOTO' | 'PODCAST' | 'EVENTS';
+      if (!['PHOTO', 'PODCAST', 'EVENTS'].includes(brand)) throw new DomainError('VALIDATION', 'One or more requested services are unavailable.');
       const { enquiry, accessToken } = await createEnquiry(body, actor, ctx, prisma, new Date(), brand, 'STUDIO');
       await notifyEnquiryReceived(enquiry, accessToken);
       return { reference: enquiry.reference, status: enquiry.status, accessToken };

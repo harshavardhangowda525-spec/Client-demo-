@@ -19,6 +19,11 @@ import {
   upsertDiscoveryCategory,
   upsertEquipment,
   upsertTestimonial,
+  listOffersAdmin,
+  upsertOffer,
+  listReviewsAdmin,
+  moderateReview,
+  checkIn,
 } from '@studio/core';
 import { defineRoute, getActor, registry, requestContext } from '../http/registry';
 
@@ -81,6 +86,30 @@ export function registerAdminStudioRoutes(app: FastifyInstance) {
     method: 'POST', url: '/api/v1/admin/reschedule-requests/:id/decide', summary: 'Approve (re-checks availability) or decline a reschedule request', tags: ['Admin: bookings'], access: 'bookings.manage',
     params: idParam, body: z.object({ approve: z.boolean(), note: z.string().max(500).optional() }),
     handler: ({ params, body, actor, ctx }) => decideReschedule(params.id, body.approve, body.note, actor!, ctx),
+  });
+
+  // --- Offers & coupons -------------------------------------------------------------------
+  defineRoute(app, { method: 'GET', url: '/api/v1/admin/offers', summary: 'Offers and coupon codes with redemption counts', tags: ['Admin: offers'], access: 'catalog.read', handler: () => listOffersAdmin() });
+  defineRoute(app, { method: 'POST', url: '/api/v1/admin/offers', summary: 'Create an offer / coupon code', tags: ['Admin: offers'], access: 'catalog.manage', body: anyBody, status: 201, handler: ({ body, actor, ctx }) => upsertOffer(null, body, actor!, ctx) });
+  defineRoute(app, { method: 'PUT', url: '/api/v1/admin/offers/:id', summary: 'Update an offer / coupon code', tags: ['Admin: offers'], access: 'catalog.manage', params: idParam, body: anyBody, handler: ({ params, body, actor, ctx }) => upsertOffer(params.id, body, actor!, ctx) });
+
+  // --- Reviews moderation ------------------------------------------------------------------
+  defineRoute(app, {
+    method: 'GET', url: '/api/v1/admin/reviews', summary: 'Customer reviews (published and hidden)', tags: ['Admin: reviews'], access: 'content.manage',
+    query: z.object({ status: z.enum(['PUBLISHED', 'HIDDEN']).optional() }),
+    handler: ({ query }) => listReviewsAdmin(query.status),
+  });
+  defineRoute(app, {
+    method: 'POST', url: '/api/v1/admin/reviews/:id/moderate', summary: 'Hide a review (reason required) or show it again; review text cannot be edited', tags: ['Admin: reviews'], access: 'content.manage',
+    params: idParam, body: z.object({ publish: z.boolean(), reason: z.string().max(300).optional() }),
+    handler: ({ params, body, actor, ctx }) => moderateReview(params.id, body.publish, body.reason, actor!, ctx),
+  });
+
+  // --- E-ticket check-in -----------------------------------------------------------------------
+  defineRoute(app, {
+    method: 'POST', url: '/api/v1/admin/check-in', summary: 'Check a customer in by scanning or typing their e-ticket code (safe to repeat)', tags: ['Admin: bookings'], access: 'bookings.manage',
+    body: z.object({ code: z.string().trim().min(5).max(40) }), rateLimit: { max: 60, timeWindow: '1 minute' },
+    handler: ({ body, actor, ctx }) => checkIn(body.code, actor!, ctx),
   });
 
   defineRoute(app, {

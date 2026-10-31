@@ -15,6 +15,9 @@ const envSchema = z.object({
   TWILIO_SMS_FROM: z.string().optional(),
   TWILIO_WHATSAPP_FROM: z.string().optional(),
   GOOGLE_MAPS_EMBED_API_KEY: z.string().optional(),
+  /** Signs e-ticket QR codes. Falls back to BETTER_AUTH_SECRET so existing deployments need no new setting. */
+  TICKET_SIGNING_SECRET: z.string().min(32).optional(),
+  BETTER_AUTH_SECRET: z.string().optional(),
   /** Enables the development-only notification preview inbox in the admin panel. */
   NOTIFICATION_PREVIEWS: z.enum(['true', 'false']).optional(),
   SITE_URL_PHOTO: z.string().url().default('http://localhost:3001'),

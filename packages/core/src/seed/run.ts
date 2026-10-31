@@ -22,6 +22,7 @@ export const DEMO_USERS = [
 ];
 
 const TABLES = [
+  'OfferRedemption', 'OfferService', 'Offer', 'Review',
   'RescheduleRequest', 'EnquiryAttachment', 'SavedService', 'NotificationTemplate', 'ContentPage', 'Testimonial', 'HomeBanner',
   'ServiceEquipment', 'Equipment', 'ServiceDiscoveryCategory', 'DiscoveryCategory',
   'AuditLog', 'IntegrationCheck', 'Setting', 'ContactMessage', 'Faq', 'PortfolioImage', 'PortfolioProject',
@@ -154,6 +155,7 @@ export async function seedDemo(opts: { force?: boolean; withSampleActivity?: boo
     await prisma.homeBanner.create({ data: { ...b, imageAlt: catalogImages[b.imageKey]?.alt ?? b.title, sortOrder: i } });
   }
   for (const p of data.contentPages) await prisma.contentPage.create({ data: { ...p, isTemplate: true } });
+  await seedOffers(serviceIds);
 
   // Content
   const images = imageCatalog.images as Record<string, { alt: string }>;
@@ -284,13 +286,22 @@ async function seedActivity(ids: { today: LocalDate; serviceIds: Record<string, 
   await prisma.customerProfile.updateMany({ data: { isDemo: true } });
 }
 
+/** Sample coupons (labelled as samples). Restricted to the listed services when given. */
+async function seedOffers(serviceIds: Record<string, string>) {
+  for (const o of data.offers) {
+    const { services, ...rest } = o as typeof o & { services?: string[] };
+    const ids = (services ?? []).map((k) => serviceIds[k]).filter((x): x is string => !!x);
+    await prisma.offer.create({ data: { ...rest, isDemo: true, services: { create: ids.map((serviceId) => ({ serviceId })) } } });
+  }
+}
+
 /**
  * Adds the studio platform's demo content to a database created before it
  * existed. Purely additive: existing services, bookings, customers and content
  * are never changed or removed, so it is safe on a database with real bookings.
  */
 export async function topUpStudioContent() {
-  const added = { services: 0, categories: 0, equipment: 0, banners: 0, pages: 0, faqs: 0 };
+  const added = { services: 0, categories: 0, equipment: 0, banners: 0, pages: 0, faqs: 0, offers: 0 };
   const serviceIds: Record<string, string> = {};
   for (const s of data.services) {
     const existing = await prisma.service.findUnique({ where: { brand_slug: { brand: s.brand, slug: s.slug } } });
@@ -359,6 +370,10 @@ export async function topUpStudioContent() {
     await prisma.contentPage.create({ data: { ...p, isTemplate: true } });
     added.pages += 1;
   }
+  if ((await prisma.offer.count()) === 0) {
+    await seedOffers(serviceIds);
+    added.offers = data.offers.length;
+  }
   if ((await prisma.faq.count({ where: { brand: 'STUDIO' } })) === 0) {
     const list = data.faqs.STUDIO ?? [];
     await prisma.faq.createMany({ data: list.map((f, i) => ({ brand: 'STUDIO' as const, question: f.q, answer: f.a, sortOrder: i, isDemo: true })) });
@@ -371,10 +386,11 @@ const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].repla
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
   (ifEmpty
-    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count()]).then(([users, studio]) => {
+    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.discoveryCategory.count({ where: { slug: 'events' } })]).then(([users, studio, events]) => {
         const skip = { users: [] as { email: string; role: string; password: string }[] };
         if (users === 0) return seedDemo({ force: process.argv.includes('--force') });
-        if (studio > 0) {
+        // Up to date when the newest demo content (the Events category) is present.
+        if (studio > 0 && events > 0) {
           console.info('Database already has data: skipping demo seed (--if-empty).');
           return skip;
         }

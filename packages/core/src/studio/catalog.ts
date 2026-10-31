@@ -4,6 +4,8 @@ import { getAllSettings, getSetting, STUDIO_BRANDS } from '../settings';
 import { getAvailability } from '../availability/service';
 import { formatLocalDate, minutesToHHMM, todayIn } from '../time';
 import { publicIntegrationFlags } from '../integrations/status';
+import { ratingSummaries } from '../reviews/service';
+import { listPublicOffers } from '../offers/service';
 import type { studioListingQuerySchema } from '../schemas';
 import type { z } from 'zod';
 
@@ -56,7 +58,17 @@ function cardDto(s: ServiceRow, popularity = 0) {
     popularity,
   };
 }
-export type StudioServiceCard = ReturnType<typeof cardDto> & { nextAvailable?: { date: string; startTime: string; city: string } | null };
+export type StudioServiceCard = ReturnType<typeof cardDto> & {
+  nextAvailable?: { date: string; startTime: string; city: string } | null;
+  /** Published customer reviews only; null when there are none. */
+  rating?: { average: number; count: number } | null;
+};
+
+/** Adds the real average rating (or null) to each card. */
+async function withRatings<T extends { id: string }>(cards: T[], db: Db): Promise<(T & { rating: { average: number; count: number } | null })[]> {
+  const map = await ratingSummaries(cards.map((c) => c.id), db);
+  return cards.map((c) => ({ ...c, rating: map.get(c.id) ?? null }));
+}
 
 async function popularityMap(db: Db) {
   const since = new Date(Date.now() - 90 * 86_400_000);
@@ -125,8 +137,9 @@ export async function getStudioHome(city?: string, db: Db = prisma) {
     cities,
     banners: banners.map((b) => ({ id: b.id, title: b.title, subtitle: b.subtitle, imageKey: b.imageKey, imageAlt: b.imageAlt, ctaLabel: b.ctaLabel, ctaHref: b.ctaHref, offerText: b.offerText })),
     categories: categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name, description: c.description, imageKey: c.imageKey, serviceCount: c._count.services, isDemo: c.isDemo })),
-    popular: await withAvailability(popular, pop, city, db),
-    featured: featured.map((s) => cardDto(s, pop.get(s.id) ?? 0)),
+    popular: await withRatings(await withAvailability(popular, pop, city, db), db),
+    featured: await withRatings(featured.map((s) => cardDto(s, pop.get(s.id) ?? 0)), db),
+    offers: (await listPublicOffers(db, now)).slice(0, 6),
     packages: packages.map((p) => ({ id: p.id, name: p.name, description: p.description, includes: p.includes, priceMinor: p.priceMinor, durationMin: p.durationMin, isFeatured: p.isFeatured, isDemo: p.isDemo, service: p.service })),
     equipment: equipment.map((e) => ({ id: e.id, name: e.name, category: e.category, description: e.description, imageKey: e.imageKey, isVerified: e.isVerified })),
     portfolio: portfolio.map((p) => ({ id: p.id, slug: p.slug, title: p.title, summary: p.summary, coverImage: p.coverImage, coverAlt: p.coverAlt, videoUrl: p.videoUrl, category: p.category, isSample: p.isSample })),
@@ -166,7 +179,7 @@ export async function searchStudio(q: string, db: Db = prisma) {
   const score = (s: ServiceRow) => (s.name.toLowerCase().includes(lower) ? 3 : 0) + (s.discoveryCategories.some((c) => c.category.name.toLowerCase().includes(lower)) ? 2 : 0) + (pop.get(s.id) ?? 0) / 1000;
   return {
     query: term,
-    services: rows.sort((a, b) => score(b) - score(a)).slice(0, 20).map((s) => cardDto(s, pop.get(s.id) ?? 0)),
+    services: await withRatings(rows.sort((a, b) => score(b) - score(a)).slice(0, 20).map((s) => cardDto(s, pop.get(s.id) ?? 0)), db),
     categories: cats.map((c) => ({ slug: c.slug, name: c.name })),
   };
 }
@@ -242,7 +255,7 @@ export async function listStudioServices(q: ListingQuery, db: Db = prisma) {
     total,
     page: q.page,
     pageSize: q.pageSize,
-    items: await withAvailability(pageItems, pop, q.city, db),
+    items: await withRatings(await withAvailability(pageItems, pop, q.city, db), db),
     facets: {
       priceMin: prices.length ? Math.min(...prices) : 0,
       priceMax: prices.length ? Math.max(...prices) : 0,
@@ -308,7 +321,8 @@ export async function getStudioService(slug: string, db: Db = prisma) {
     cancellationPolicy: settings.cancellationPolicy,
     pricing: { taxLabel: settings.pricing.taxLabel, isSample: settings.pricing.isSample },
     portfolio: portfolio.map((p) => ({ id: p.id, slug: p.slug, title: p.title, coverImage: p.coverImage, coverAlt: p.coverAlt, isSample: p.isSample })),
-    related: related.slice(0, 8).map((r) => cardDto(r, pop.get(r.id) ?? 0)),
+    related: await withRatings(related.slice(0, 8).map((r) => cardDto(r, pop.get(r.id) ?? 0)), db),
+    rating: (await ratingSummaries([s.id], db)).get(s.id) ?? null,
     testimonials: testimonials.map((t) => ({ id: t.id, quote: t.quote, authorName: t.authorName, authorDetail: t.authorDetail })),
     nextAvailable,
   };
@@ -343,3 +357,58 @@ export async function studioCities(db: Db = prisma) {
   return { timezone: settings.timezone, cities: [...new Set(rows.map((r) => r.city))].sort() };
 }
 
+
+
+// --- Showtimes-style slot picker ---------------------------------------------------------
+/**
+ * Free start times for one date at every studio offering the service, plus
+ * which of the next days have any free time (for the date strip). Uses the
+ * same availability engine as booking, so a shown time can actually be booked.
+ */
+export async function getShowtimes(
+  slug: string,
+  q: { date?: string; packageId?: string | null; durationMin?: number | null; city?: string; days?: number },
+  db: Db = prisma,
+) {
+  const [s] = await loadServices(studioWhere({ slug }), db);
+  if (!s) throw notFound('Service');
+  if (s.bookingMode === 'ENQUIRY') return { serviceId: s.id, bookingMode: s.bookingMode, days: [], date: null, locations: [] };
+  const pkg = q.packageId ? s.packages.find((p) => p.id === q.packageId) : (s.packages.find((p) => p.isFeatured) ?? s.packages[0]);
+  if (q.packageId && !pkg) throw notFound('Package');
+  const durationMin = pkg ? null : (q.durationMin ?? s.defaultDurationMin);
+  const links = s.locations.filter((l) => !q.city || l.location.city.toLowerCase() === q.city.toLowerCase());
+  const tz = links[0]?.location.timezone ?? 'Asia/Kolkata';
+  const today = formatLocalDate(todayIn(tz));
+  const span = Math.min(Math.max(q.days ?? 14, 1), 31);
+  const results = await Promise.all(
+    links.map(async (l) => {
+      try {
+        const a = await getAvailability({ serviceId: s.id, locationId: l.locationId, date: today, days: span, packageId: pkg?.id ?? null, durationMin }, db);
+        return { location: l.location, availability: a };
+      } catch {
+        return { location: l.location, availability: null };
+      }
+    }),
+  );
+  const dayMap = new Map<string, number>();
+  for (const r of results) for (const d of r.availability?.days ?? []) dayMap.set(d.date, (dayMap.get(d.date) ?? 0) + d.slots.length);
+  const days = [...dayMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, slots]) => ({ date, slots }));
+  const date = q.date && dayMap.has(q.date) ? q.date : (days.find((d) => d.slots > 0)?.date ?? days[0]?.date ?? today);
+  return {
+    serviceId: s.id,
+    bookingMode: s.bookingMode,
+    packageId: pkg?.id ?? null,
+    durationMin: pkg?.durationMin ?? durationMin,
+    isDemoAvailability: results.some((r) => r.availability?.isDemoAvailability),
+    days,
+    date,
+    locations: results.map((r) => ({
+      id: r.location.id,
+      name: r.location.name,
+      addressLine1: r.location.addressLine1,
+      city: r.location.city,
+      isDemo: r.location.isDemo,
+      slots: (r.availability?.days.find((d) => d.date === date)?.slots ?? []).map((sl) => ({ startTime: sl.startTime, endTime: sl.endTime })),
+    })),
+  };
+}

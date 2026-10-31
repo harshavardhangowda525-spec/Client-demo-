@@ -391,6 +391,7 @@ export const discoveryCategories = [
   { slug: 'studio-rental', name: 'Studio Rental', description: 'Hire studio space by the hour.', imageKey: 'podcast-booth' },
   { slug: 'product-shoots', name: 'Product Shoots', description: 'Catalogue and campaign product imagery.', imageKey: 'photo-product' },
   { slug: 'commercial-production', name: 'Commercial Production', description: 'Brand campaigns and advertising shoots.', imageKey: 'photo-commercial' },
+  { slug: 'events', name: 'Events', description: 'Corporate events, celebrations, workshops and launches.', imageKey: 'events-hero' },
 ];
 
 /** Service key → discovery category slugs. */
@@ -410,7 +411,19 @@ export const serviceDiscovery: Record<string, string[]> = {
   'interview-recording': ['videography', 'podcasting'],
   'youtube-content': ['video-production', 'videography'],
   'brand-campaign': ['commercial-production', 'videography', 'photography'],
+  consultation: ['events'],
+  'corporate-events': ['events'],
+  celebrations: ['events'],
+  workshops: ['events'],
+  launches: ['events'],
+  'private-events': ['events'],
 };
+
+/** Sample coupons so the offers feature can be demonstrated. Clearly labelled; replace with real offers. */
+export const offers = [
+  { code: 'DEMO10', title: '10% off your first studio session (sample offer)', description: 'Sample offer for the demo: 10% off, up to ₹1,000.', terms: 'Sample terms for demonstration. One use per customer.', discountType: 'PERCENT' as const, value: 1000, maxDiscountMinor: 100_000, minOrderMinor: 200_000, perCustomerLimit: 1, imageKey: 'photo-hero' },
+  { code: 'PODCAST500', title: '₹500 off podcast recording (sample offer)', description: 'Sample offer for the demo on podcast sessions.', terms: 'Sample terms for demonstration. Valid on podcast recording services only.', discountType: 'FLAT' as const, value: 50_000, maxDiscountMinor: null, minOrderMinor: 300_000, perCustomerLimit: 2, imageKey: 'podcast-hero', services: ['audio-recording', 'video-podcast', 'multicam'] },
+];
 
 export const featuredServices = ['portrait', 'video-podcast', 'promo-video', 'product', 'photo-studio-rental'];
 

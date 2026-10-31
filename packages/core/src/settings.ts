@@ -176,4 +176,4 @@ export function siteContentFor(settings: Settings, brand: Brand) {
 }
 
 /** Brands whose services appear on the unified studio discovery site. */
-export const STUDIO_BRANDS = ['PHOTO', 'PODCAST'] as const;
+export const STUDIO_BRANDS = ['PHOTO', 'PODCAST', 'EVENTS'] as const;
