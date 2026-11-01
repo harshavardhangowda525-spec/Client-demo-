@@ -4,7 +4,7 @@ import '@studio/ui/styles.css';
 import './theme.css';
 import './premium.css';
 import { DemoBar } from '@studio/ui';
-import { getMe, getSiteConfig, serverApi } from '@studio/ui/server';
+import { adminUrl, getMe, getSiteConfig, serverApi } from '@studio/ui/server';
 import { SessionProvider } from '../components/Session';
 import { StudioFooter } from '../components/StudioFooter';
 import { StudioHeader } from '../components/StudioHeader';
@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en-IN">
       {/* Members see the premium (dark and gold) version of the whole site. */}
       <body className={membership ? 'st-premium' : undefined} data-plan={membership?.plan.key}>
-        <SessionProvider signedIn={!!me}>
+        <SessionProvider signedIn={!!me} signIn={{ emailDelivery: config.integrations.emailDelivery, googleSignIn: !!config.integrations.googleSignIn, adminUrl: adminUrl() }}>
         <a href="#main" className="skip-link">Skip to content</a>
         <DemoBar />
         <StudioHeader siteName={config.site.name} />

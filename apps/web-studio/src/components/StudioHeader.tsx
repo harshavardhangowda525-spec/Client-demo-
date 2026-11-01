@@ -6,6 +6,7 @@ import type { StudioCategory } from '../lib/types';
 import { CategoryBar } from './CategoryBar';
 import { CityPicker } from './CityPicker';
 import { SearchBox } from './SearchBox';
+import { SignInButton } from './Session';
 
 export async function StudioHeader({ siteName }: { siteName: string }) {
   const [me, cities, categories, city, chosen, membership] = await Promise.all([
@@ -36,7 +37,7 @@ export async function StudioHeader({ siteName }: { siteName: string }) {
             {firstName ? (
               <Link href="/account" className="st-city" style={{ textDecoration: 'none' }}>Hi, {firstName}</Link>
             ) : (
-              <Link href="/account" className="st-signin">Sign in</Link>
+              <SignInButton className="st-signin" />
             )}
           </div>
         </div>

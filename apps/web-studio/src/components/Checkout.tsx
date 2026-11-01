@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api, fieldErrors, formatCalendarDate, formatDuration, formatMoney, rememberAccessToken, TextField, type Me, type SiteConfig } from '@studio/ui';
 import type { StudioService } from '../lib/types';
 import type { PublicOffer } from './OfferCard';
+import { useSignIn } from './Session';
 
 interface Line { kind: string; description: string; quantity: number; unitPriceMinor: number; totalMinor: number }
 interface Quote {
@@ -50,6 +51,11 @@ export function Checkout({ service, location, date, time, packageId, durationMin
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const openSignIn = useSignIn();
+  // After signing in from the pop-up the page refreshes with the account; fill in any blank details.
+  useEffect(() => {
+    if (me) setContact((c) => ({ name: c.name || me.profile.fullName, email: c.email || me.profile.email, phone: c.phone || (me.profile.phone ?? '') }));
+  }, [me]);
   const isRequest = service.bookingMode === 'REQUEST';
 
   const body = useMemo(
@@ -185,7 +191,7 @@ export function Checkout({ service, location, date, time, packageId, durationMin
 
         <section aria-labelledby="contact-h" className="st-panel stack">
           <h2 id="contact-h" style={{ fontSize: '1.15rem', margin: 0 }}>Your details</h2>
-          {!me && <p className="small muted" style={{ margin: 0 }}>Booking as a guest. <a href={`/account?next=${encodeURIComponent(typeof window === 'undefined' ? '/checkout' : window.location.pathname + window.location.search)}`}>Sign in</a> to keep your bookings and tickets in one place.</p>}
+          {!me && <p className="small muted" style={{ margin: 0 }}>Booking as a guest. <button type="button" className="link-button" onClick={() => openSignIn()} aria-haspopup="dialog">Sign in</button> to keep your bookings and tickets in one place.</p>}
           <div className="form-row form-row--2">
             <TextField id="name" label="Full name" autoComplete="name" value={contact.name} onChange={(v) => setContact({ ...contact, name: v })} error={errors['contact.name']} required />
             <TextField id="email" label="Email" type="email" autoComplete="email" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} error={errors['contact.email']} required readOnly={!!me} hint="Your e-ticket and confirmation are sent here." />

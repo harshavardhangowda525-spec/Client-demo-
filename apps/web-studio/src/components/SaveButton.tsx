@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@studio/ui';
-import { useSignedIn } from './Session';
+import { useSignIn, useSignedIn } from './Session';
 
 // One request per page load, shared by every save button on the page.
 let savedIds: Promise<Set<string> | null> | null = null;
@@ -13,8 +12,7 @@ function loadSaved() {
 }
 
 export function SaveButton({ serviceId, serviceName, variant = 'icon' }: { serviceId: string; serviceName: string; variant?: 'icon' | 'button' }) {
-  const router = useRouter();
-  const pathname = usePathname();
+  const openSignIn = useSignIn();
   const [saved, setSaved] = useState(false);
   const signedIn = useSignedIn();
   const [busy, setBusy] = useState(false);
@@ -34,7 +32,7 @@ export function SaveButton({ serviceId, serviceName, variant = 'icon' }: { servi
     e.preventDefault();
     e.stopPropagation();
     if (!signedIn) {
-      router.push(`/account?next=${encodeURIComponent(pathname)}`);
+      openSignIn();
       return;
     }
     setBusy(true);
@@ -44,7 +42,7 @@ export function SaveButton({ serviceId, serviceName, variant = 'icon' }: { servi
     if (res.ok) {
       setSaved(next);
       savedIds = null;
-    } else if (res.status === 401) router.push(`/account?next=${encodeURIComponent(pathname)}`);
+    } else if (res.status === 401) openSignIn();
   }
 
   const label = !signedIn ? `Sign in to save ${serviceName}` : saved ? `Remove ${serviceName} from saved` : `Save ${serviceName}`;
