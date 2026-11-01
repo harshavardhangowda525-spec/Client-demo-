@@ -186,3 +186,35 @@
 .st-premium .mb-demo__box { background: #15120d; }
 .st-premium .mb-account:not(.mb-account--member) { background: #15120d; }
 .st-premium .st-dialog { background: var(--bg); color: var(--text); }
+
+/* --- Manage membership: the active plan as a card, then the other plans --- */
+.mb-current { display: grid; gap: clamp(1.25rem, 4vw, 2.5rem); align-items: center; padding: clamp(1.25rem, 4vw, 2rem); border-radius: var(--radius-lg); border: 1px solid #3a3122;
+  background: radial-gradient(800px 300px at 0% 0%, rgba(212, 175, 55, 0.14), transparent 60%), linear-gradient(180deg, #17130d, #0b0a08); color: #eadfc8; }
+@media (min-width: 860px) { .mb-current { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); } }
+.mb-current h2 { color: #fff; font-family: Georgia, 'Times New Roman', serif; font-weight: 600; }
+.mb-current .mb-eyebrow { color: var(--gold-2); }
+.mb-current .muted { color: #b9ad95; }
+
+.mb-card { position: relative; aspect-ratio: 1.586; width: 100%; max-width: 420px; border-radius: 18px; padding: clamp(1rem, 4vw, 1.5rem); display: flex; flex-direction: column; overflow: hidden; isolation: isolate;
+  color: #1a1406; background: linear-gradient(135deg, #f7e19a 0%, #d4af37 38%, #a8831f 62%, #f1d27a 100%); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+.mb-card::before { content: ''; position: absolute; inset: 0; z-index: -1; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 9px); }
+.mb-card::after { content: ''; position: absolute; width: 70%; height: 140%; top: -20%; right: -35%; z-index: -1; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.35), transparent); transform: rotate(20deg); }
+.mb-card--plus { color: #f2f2f4; background: linear-gradient(135deg, #8d939e 0%, #4b505a 45%, #2a2d33 70%, #6d727c 100%); }
+.mb-card--advanced { color: #f3d27a; background: linear-gradient(135deg, #2a2418 0%, #0b0a08 45%, #000 70%, #2a2418 100%); border: 1px solid #6b5a2c; }
+.mb-card__top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.mb-card__brand { font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.72rem; }
+.mb-card__status { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0.15em 0.6em; }
+.mb-card__plan { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2rem, 1.4rem + 3vw, 2.9rem); font-weight: 600; margin: auto 0 0; line-height: 1; color: inherit; }
+.mb-card__perk { margin: var(--space-1) 0 var(--space-3); font-weight: 600; font-size: 0.86rem; opacity: 0.9; }
+.mb-card__bottom { display: flex; justify-content: space-between; gap: var(--space-3); }
+.mb-card__bottom div { display: grid; min-width: 0; }
+.mb-card__bottom small { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
+.mb-card__bottom span { font-weight: 700; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-card__chip { position: absolute; top: 38%; right: clamp(1rem, 4vw, 1.5rem); width: 42px; height: 32px; border-radius: 6px; z-index: -1; opacity: 0.85;
+  background: linear-gradient(135deg, #fff2c2, #c9a227); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.mb-card--plus .mb-card__chip { background: linear-gradient(135deg, #f3f3f3, #a8adb5); }
+
+.mb-meter { height: 8px; border-radius: 99px; background: #2b2418; overflow: hidden; }
+.mb-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--gold-2), var(--gold)); }
+.mb-switch-head { margin-top: var(--space-6); display: grid; gap: var(--space-1); }
+.mb-switch-head h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 600; }

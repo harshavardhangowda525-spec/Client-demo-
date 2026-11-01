@@ -44,17 +44,76 @@ const period = (days: number) => (days === 30 ? 'month' : days === 365 ? 'year' 
  * server sets the amount, and the membership turns on only after the payment
  * is verified there.
  */
-export function MembershipPlans({ plans, signedIn, currentPlanKey, paymentsMode }: {
+export interface MemberDetails {
+  holderName: string;
+  startsAt: string;
+  endsAt: string;
+  isSimulated: boolean;
+  /** Server time when the page was rendered, so the server and browser show the same days left. */
+  now: string;
+}
+
+const longDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+
+/** The member's active plan, drawn as a membership card. */
+function MemberCard({ plan, member, onRenew, busy, canPay }: { plan: PlanCardData; member: MemberDetails; onRenew: () => void; busy: boolean; canPay: boolean }) {
+  const start = new Date(member.startsAt).getTime();
+  const end = new Date(member.endsAt).getTime();
+  const now = new Date(member.now).getTime();
+  const daysLeft = Math.max(0, Math.ceil((end - now) / 86_400_000));
+  const used = Math.min(1, Math.max(0, (now - start) / Math.max(1, end - start)));
+  return (
+    <section className="mb-current" aria-labelledby="mb-current-h">
+      <div className={`mb-card mb-card--${plan.key}`}>
+        <div className="mb-card__top">
+          <span className="mb-card__brand"><span aria-hidden="true">∞</span> Infinity Premium</span>
+          <span className="mb-card__status">Active</span>
+        </div>
+        <p id="mb-current-h" className="mb-card__plan">{plan.name}</p>
+        <p className="mb-card__perk">{plan.bookingDiscountBps / 100}% off every booking</p>
+        <div className="mb-card__bottom">
+          <div><small>Member</small><span>{member.holderName}</span></div>
+          <div><small>Valid until</small><span>{longDate(member.endsAt)}</span></div>
+        </div>
+        <span className="mb-card__chip" aria-hidden="true" />
+      </div>
+      <div className="mb-current__info stack">
+        <p className="mb-eyebrow" style={{ margin: 0 }}>Your active plan</p>
+        <h2 style={{ margin: 0 }}>{plan.name} · {formatMoney(plan.priceMinor)} / {period(plan.periodDays)}</h2>
+        <div>
+          <div className="mb-meter" role="progressbar" aria-label="Membership time used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(used * 100)}>
+            <span style={{ width: `${used * 100}%` }} />
+          </div>
+          <p className="small" style={{ margin: 'var(--space-2) 0 0' }}><strong>{daysLeft} {daysLeft === 1 ? 'day' : 'days'} left</strong> · started {longDate(member.startsAt)}</p>
+        </div>
+        {plan.perks.length > 0 && <ul className="mb-plan__perks" style={{ margin: 0 }}>{plan.perks.map((perk) => <li key={perk}>{perk}</li>)}</ul>}
+        {member.isSimulated && <p className="small muted" style={{ margin: 0 }}>Paid with a test payment (no real money moved).</p>}
+        {canPay && (
+          <div>
+            <button type="button" className="mb-btn" onClick={onRenew} disabled={busy}>{busy ? 'Starting…' : `Renew ${plan.name} (+${plan.periodDays} days)`}</button>
+            <p className="small muted" style={{ margin: 'var(--space-2) 0 0' }}>Renewing adds {plan.periodDays} days after {longDate(member.endsAt)}.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function MembershipPlans({ plans, signedIn, currentPlanKey, paymentsMode, member }: {
   plans: PlanCardData[];
   signedIn: boolean;
   currentPlanKey: string | null;
   paymentsMode: 'demo' | 'live' | 'disabled';
+  /** Present for an active member: shows their plan as a card, then the other plans. */
+  member?: MemberDetails | null;
 }) {
   const router = useRouter();
   const openSignIn = useSignIn();
   const [busy, setBusy] = useState<string | null>(null);
   const [demo, setDemo] = useState<{ membershipId: string; plan: PlanCardData } | null>(null);
   const [message, setMessage] = useState<{ tone: 'danger' | 'info'; text: string } | null>(null);
+  const currentPlan = plans.find((p) => p.key === currentPlanKey) ?? null;
+  const otherPlans = plans.filter((p) => p.key !== currentPlanKey);
 
   function joined() {
     router.push('/membership/welcome');
@@ -124,8 +183,17 @@ export function MembershipPlans({ plans, signedIn, currentPlanKey, paymentsMode 
   return (
     <div className="stack">
       {message && <div className={`alert alert--${message.tone}`} role={message.tone === 'danger' ? 'alert' : 'status'}>{message.text}</div>}
+      {member && currentPlan && (
+        <MemberCard plan={currentPlan} member={member} onRenew={() => buy(currentPlan)} busy={busy === currentPlan.key} canPay={paymentsMode !== 'disabled'} />
+      )}
+      {member && currentPlan && (
+        <div className="mb-switch-head">
+          <h2 id="mb-switch">{otherPlans.length ? 'Switch to another plan' : 'No other plans right now'}</h2>
+          {otherPlans.length > 0 && <p className="small muted" style={{ margin: 0 }}>Switching starts the new plan today for a full {otherPlans[0]!.periodDays} days and replaces your {currentPlan.name} plan.</p>}
+        </div>
+      )}
       <div className="mb-plans">
-        {plans.map((p) => {
+        {(member && currentPlan ? otherPlans : plans).map((p) => {
           const current = currentPlanKey === p.key;
           return (
             <article key={p.key} className={`mb-plan${p.isFeatured ? ' mb-plan--featured' : ''}`} aria-labelledby={`plan-${p.key}`}>
