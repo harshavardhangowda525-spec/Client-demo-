@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { api, formatMoney } from '@studio/ui';
+import { useSignIn } from './Session';
 
 export interface PlanCardData {
   key: string;
@@ -51,6 +51,7 @@ export function MembershipPlans({ plans, signedIn, currentPlanKey, paymentsMode 
   paymentsMode: 'demo' | 'live' | 'disabled';
 }) {
   const router = useRouter();
+  const openSignIn = useSignIn();
   const [busy, setBusy] = useState<string | null>(null);
   const [demo, setDemo] = useState<{ membershipId: string; plan: PlanCardData } | null>(null);
   const [message, setMessage] = useState<{ tone: 'danger' | 'info'; text: string } | null>(null);
@@ -135,7 +136,7 @@ export function MembershipPlans({ plans, signedIn, currentPlanKey, paymentsMode 
               <p className="mb-plan__save">{p.bookingDiscountBps / 100}% off every booking</p>
               <ul className="mb-plan__perks">{p.perks.map((perk) => <li key={perk}>{perk}</li>)}</ul>
               {!signedIn ? (
-                <Link className="mb-btn" href={`/account?next=${encodeURIComponent('/membership')}`}>Sign in to join</Link>
+                <button type="button" className="mb-btn" onClick={() => openSignIn()} aria-haspopup="dialog">Sign in to join</button>
               ) : paymentsMode === 'disabled' ? (
                 <span className="small muted">Online payment is not enabled yet.</span>
               ) : (

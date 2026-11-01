@@ -185,3 +185,4 @@
 .st-premium .table th, .st-premium .table td, .st-premium .breakdown td { border-color: var(--border); }
 .st-premium .mb-demo__box { background: #15120d; }
 .st-premium .mb-account:not(.mb-account--member) { background: #15120d; }
+.st-premium .st-dialog { background: var(--bg); color: var(--text); }

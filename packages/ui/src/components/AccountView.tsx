@@ -32,7 +32,7 @@ export function googleErrorMessage(code: string): string {
   return `${reasons[code] ?? 'Google sign-in did not complete. Please try again or use email and password.'} (code: ${code})`;
 }
 
-export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true, googleSignIn = false, oauthError }: {
+export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email: 'customer@demo.example', password: 'DemoCustomer!2026', label: 'Demo customer' }, allowRegister = true, googleSignIn = false, oauthError, onSignedIn, idPrefix = 'a', bare = false }: {
   next?: string;
   emailDelivery: boolean;
   adminUrl?: string;
@@ -42,6 +42,12 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
   googleSignIn?: boolean;
   /** Error code returned by the sign-in provider, if the last attempt failed. */
   oauthError?: string;
+  /** Called after an email sign-in or sign-up succeeds (e.g. to close a pop-up) instead of navigating. */
+  onSignedIn?: () => void;
+  /** Prefix for field ids, so two panels on one page never share ids. */
+  idPrefix?: string;
+  /** Render without the card frame (inside a dialog). */
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<'signin' | 'register' | 'forgot'>('signin');
@@ -97,13 +103,17 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
       );
       return;
     }
+    if (onSignedIn) {
+      onSignedIn();
+      return;
+    }
     if (next && next.startsWith('/') && !next.startsWith('//')) router.push(next);
     router.refresh();
   }
 
   const tabs = ([['signin', 'Sign in'], ['register', 'Create account'], ['forgot', 'Forgot password']] as [typeof mode, string][]).filter(([m]) => allowRegister || m !== 'register');
   return (
-    <div className="card" style={{ maxWidth: 520 }}>
+    <div className={bare ? undefined : 'card'} style={bare ? undefined : { maxWidth: 520 }}>
       <div className="filters" role="tablist" aria-label="Account options">
         {tabs.map(([m, label]) => (
           <button key={m} type="button" role="tab" className="chip" aria-selected={mode === m} onClick={() => { setMode(m); setError(null); setInfo(null); }}>
@@ -121,10 +131,10 @@ export function AuthPanel({ next, emailDelivery, adminUrl, demoAccount = { email
         </div>
       )}
       <form className="form" onSubmit={submit} noValidate>
-        {mode === 'register' && <TextField id="a-name" label="Full name" autoComplete="name" value={name} onChange={setName} required />}
-        <TextField id="a-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} required />
+        {mode === 'register' && <TextField id={`${idPrefix}-name`} label="Full name" autoComplete="name" value={name} onChange={setName} required />}
+        <TextField id={`${idPrefix}-email`} label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} required />
         {mode !== 'forgot' && (
-          <TextField id="a-password" label="Password" type="password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} value={password} onChange={setPassword} required hint={mode === 'register' ? 'At least 10 characters.' : undefined} />
+          <TextField id={`${idPrefix}-password`} label="Password" type="password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} value={password} onChange={setPassword} required hint={mode === 'register' ? 'At least 10 characters.' : undefined} />
         )}
         {error && <p className="field-error" role="alert">{error}</p>}
         {info && <div className="alert alert--info" role="status">{info}</div>}

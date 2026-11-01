@@ -208,4 +208,31 @@ test.describe('Infinity Studios platform', () => {
     await expect(page).toHaveURL(/\/checkout\?/);
     await expect(page.getByText('Pro member price (50% off)')).toBeVisible();
   });
+
+  test('sign in opens in a dialog and keeps you on the same page', async ({ page }) => {
+    await page.goto(`${S}/service/portrait-photography`);
+    await page.locator('.st-header').getByRole('button', { name: 'Sign in' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Sign in to continue' });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/service\/portrait-photography$/);
+    // Wrong password: the error shows inside the pop-up.
+    await dialog.getByLabel('Email').fill('customer@demo.example');
+    await dialog.getByLabel('Password').fill('not-the-password');
+    await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(dialog.getByText('Email or password is incorrect.')).toBeVisible();
+    await dialog.getByLabel('Password').fill('DemoCustomer!2026');
+    await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/\/service\/portrait-photography$/);
+    await expect(page.locator('.st-header').getByRole('link', { name: /Hi, Demo/ })).toBeVisible();
+  });
+
+  test('saving a service as a guest opens the sign-in dialog instead of leaving the page', async ({ page }) => {
+    await page.goto(`${S}/services`);
+    await page.getByRole('button', { name: /Sign in to save/ }).first().click();
+    await expect(page.getByRole('dialog', { name: 'Sign in to continue' })).toBeVisible();
+    await expect(page).toHaveURL(/\/services$/);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('dialog', { name: 'Sign in to continue' })).toBeHidden();
+  });
 });
