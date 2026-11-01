@@ -177,4 +177,35 @@ test.describe('Infinity Studios platform', () => {
     await expect(page.getByText(/Request sent/)).toBeVisible();
     expect(booked).toMatch(/^PC-/);
   });
+
+  test('membership: advert, buying Pro, the premium site and half-price checkout', async ({ page }) => {
+    // Visitors see the membership advert and the plans.
+    await page.goto(S);
+    await expect(page.getByRole('heading', { name: /Members pay 50% less/ })).toBeVisible();
+    await page.getByRole('link', { name: 'See membership plans' }).click();
+    await expect(page.getByRole('heading', { name: 'Book more. Pay half.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plus' })).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/st-premium/);
+
+    // A new customer buys Pro with a (simulated) payment.
+    await register(page, uniqueEmail('member'));
+    await page.goto(`${S}/membership`);
+    await page.getByRole('button', { name: 'Get Pro' }).click();
+    await page.getByRole('button', { name: 'Simulate successful payment' }).click();
+    await expect(page).toHaveURL(/\/membership\/welcome/);
+    await expect(page.getByRole('heading', { name: /Welcome to Premium/ })).toBeVisible();
+
+    // The whole site switches to the premium look, with member prices.
+    await page.goto(S);
+    await expect(page.locator('body')).toHaveClass(/st-premium/);
+    await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Members pay 50% less/ })).toHaveCount(0);
+    await expect(page.locator('.mb-price__now').first()).toBeVisible();
+
+    // Checkout applies the member price on the server's breakdown.
+    await page.goto(`${S}/service/portrait-photography/slots?date=${weekday(16)}`);
+    await page.locator('.st-time').first().click();
+    await expect(page).toHaveURL(/\/checkout\?/);
+    await expect(page.getByText('Pro member price (50% off)')).toBeVisible();
+  });
 });

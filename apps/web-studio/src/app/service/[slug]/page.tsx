@@ -7,7 +7,8 @@ import { MobileBookBar } from '../../../components/MobileBookBar';
 import { Rail } from '../../../components/Rail';
 import { Reviews, type ReviewList } from '../../../components/Reviews';
 import { SaveButton } from '../../../components/SaveButton';
-import { priceLabel, ServiceCard } from '../../../components/ServiceCard';
+import { PriceTag, priceLabel, ServiceCard } from '../../../components/ServiceCard';
+import { getMembership, memberPrice } from '../../../lib/membership';
 import { todayIn } from '../../../lib/today';
 import type { StudioService } from '../../../lib/types';
 import { BRAND } from '../../../site';
@@ -31,11 +32,13 @@ const durationText = (s: StudioService) =>
 
 export default async function Page({ params }: { params: Params }) {
   const { slug } = await params;
-  const [s, site, reviews] = await Promise.all([
+  const [s, site, reviews, membership] = await Promise.all([
     serverApi<StudioService>(`/api/v1/studio/services/${encodeURIComponent(slug)}`),
     getSiteConfig(BRAND),
     serverApi<ReviewList>(`/api/v1/studio/services/${encodeURIComponent(slug)}/reviews`, { allow404: true }),
+    getMembership(),
   ]);
+  const memberBps = membership?.bookingDiscountBps ?? null;
   if (!s) throw new Error('Service unavailable');
   const today = todayIn(site.regional.timezone);
   const isQuote = s.bookingMode === 'ENQUIRY';
@@ -70,7 +73,8 @@ export default async function Page({ params }: { params: Params }) {
               {s.categories.map((c) => <span key={c.slug}>{c.name}</span>)}
               <span>{s.bookingMode === 'DIRECT' ? 'Instant booking' : s.bookingMode === 'REQUEST' ? 'Booking on request' : 'Custom quotation'}</span>
             </div>
-            <p className="st-meta-line">{priceLabel(s)} · {durationText(s)} · {s.cities.join(', ') || 'Location on request'}</p>
+            <p className="st-meta-line"><PriceTag s={s} memberBps={memberBps} /> · {durationText(s)} · {s.cities.join(', ') || 'Location on request'}</p>
+            {memberBps && s.fromPriceMinor != null && <p className="mb-note">{membership!.plan.name} member price: {memberBps / 100}% off, applied at checkout</p>}
             <div className="cluster">
               <Link href={bookHref} className="st-book-btn">{bookLabel}</Link>
               <SaveButton serviceId={s.id} serviceName={s.name} variant="button" />
@@ -115,7 +119,7 @@ export default async function Page({ params }: { params: Params }) {
                 <div key={p.id} className="st-panel stack" style={{ gap: 'var(--space-2)', borderColor: p.isFeatured ? 'var(--accent)' : undefined }}>
                   {p.isFeatured && <span className="badge badge--accent" style={{ width: 'fit-content' }}>Most chosen</span>}
                   <h3 style={{ margin: 0, fontSize: '1.02rem' }}>{p.name}</h3>
-                  <p style={{ margin: 0 }}><strong>{formatMoney(p.priceMinor)}</strong> <span className="small muted">· {formatDuration(p.durationMin)}</span></p>
+                  <p style={{ margin: 0 }}>{memberBps ? <span className="mb-price"><s className="mb-price__was">{formatMoney(p.priceMinor)}</s> <strong className="mb-price__now">{formatMoney(memberPrice(p.priceMinor, memberBps))}</strong></span> : <strong>{formatMoney(p.priceMinor)}</strong>} <span className="small muted">· {formatDuration(p.durationMin)}</span></p>
                   {p.description && <p className="small muted" style={{ margin: 0 }}>{p.description}</p>}
                   <ul className="small" style={{ margin: 0, paddingLeft: '1.1em' }}>{p.includes.map((x) => <li key={x}>{x}</li>)}</ul>
                   {!isQuote && <Link className="btn btn--sm" style={{ marginTop: 'auto' }} href={`/service/${s.slug}/slots?package=${p.id}`}>Book {p.name}</Link>}
@@ -213,7 +217,7 @@ export default async function Page({ params }: { params: Params }) {
         )}
       </div>
 
-      <MobileBookBar price={priceLabel(s)} label={bookLabel} href={bookHref} />
+      <MobileBookBar price={priceLabel(s, memberBps ?? undefined)} label={bookLabel} href={bookHref} />
     </div>
   );
 }

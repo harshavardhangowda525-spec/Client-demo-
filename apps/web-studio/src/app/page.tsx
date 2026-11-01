@@ -1,23 +1,31 @@
 import Link from 'next/link';
 import { FaqList, formatDuration, formatMoney } from '@studio/ui';
-import { resolveImage, SampleImage, serverApi } from '@studio/ui/server';
+import { getMe, resolveImage, SampleImage, serverApi } from '@studio/ui/server';
 import { HeroCarousel } from '../components/HeroCarousel';
+import { MembershipAd, MemberWelcome } from '../components/MembershipAd';
 import { Gallery } from '../components/Lightbox';
 import { OfferCard } from '../components/OfferCard';
 import { Rail } from '../components/Rail';
 import { ServiceCard } from '../components/ServiceCard';
 import { getCity } from '../lib/city';
+import { getMembership, getPlans } from '../lib/membership';
 import { todayIn } from '../lib/today';
 import type { StudioHome } from '../lib/types';
 
 export default async function Home() {
   const city = await getCity();
-  const home = (await serverApi<StudioHome>(`/api/v1/studio/home${city ? `?city=${encodeURIComponent(city)}` : ''}`))!;
+  const [home, membership, me, plans] = await Promise.all([
+    serverApi<StudioHome>(`/api/v1/studio/home${city ? `?city=${encodeURIComponent(city)}` : ''}`).then((h) => h!),
+    getMembership(),
+    getMe(),
+    getPlans(),
+  ]);
   const today = todayIn();
   const verifiedEquipment = home.equipment.some((e) => e.isVerified);
 
   return (
     <>
+      {membership && <MemberWelcome membership={membership} firstName={me?.profile.fullName.split(' ')[0] ?? 'member'} />}
       <div className="container">
         <HeroCarousel
           slides={home.banners.map((b, i) => ({
@@ -69,6 +77,9 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* Membership advert (not shown to members or staff) */}
+      {!membership && !me?.user.isStaff && <MembershipAd plans={plans} />}
 
       {/* Categories */}
       <section className="st-section st-band" aria-labelledby="cats">

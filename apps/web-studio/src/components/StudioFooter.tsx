@@ -32,6 +32,7 @@ export function StudioFooter({ site, categories }: { site: { name: string; tagli
             <ul>
               <li><Link href="/services">All services</Link></li>
               <li><Link href="/packages">Packages</Link></li>
+              <li><Link href="/membership">Premium membership</Link></li>
               <li><Link href="/portfolio">Portfolio</Link></li>
               <li><Link href="/studio">Studio &amp; equipment</Link></li>
               <li><Link href="/enquire">Request a custom quote</Link></li>

@@ -28,6 +28,10 @@ export interface PricingInput {
   discountMinor?: number;
   /** Shown on the discount line, e.g. "Offer FIRST10". */
   discountLabel?: string;
+  /** Membership discount, applied before any coupon. */
+  memberDiscountMinor?: number;
+  /** Shown on the membership discount line, e.g. "Pro member price (50% off)". */
+  memberDiscountLabel?: string;
   taxRateBps: number;
   taxLabel: string;
   fees?: FeeRule[];
@@ -130,11 +134,17 @@ export function calculatePrice(input: PricingInput): PriceBreakdown {
   }
 
   const subtotalMinor = lines.reduce((sum, l) => sum + l.totalMinor, 0);
-  const discountMinor = Math.min(input.discountMinor ?? 0, subtotalMinor);
-  assertNonNegativeInt(discountMinor, 'discountMinor');
-  if (discountMinor > 0) {
-    lines.push({ kind: 'DISCOUNT', refId: null, description: input.discountLabel ?? 'Discount', quantity: 1, unitPriceMinor: -discountMinor, totalMinor: -discountMinor });
+  const memberDiscountMinor = Math.min(input.memberDiscountMinor ?? 0, subtotalMinor);
+  assertNonNegativeInt(memberDiscountMinor, 'memberDiscountMinor');
+  if (memberDiscountMinor > 0) {
+    lines.push({ kind: 'DISCOUNT', refId: 'MEMBERSHIP', description: input.memberDiscountLabel ?? 'Member discount', quantity: 1, unitPriceMinor: -memberDiscountMinor, totalMinor: -memberDiscountMinor });
   }
+  const couponDiscountMinor = Math.min(input.discountMinor ?? 0, subtotalMinor - memberDiscountMinor);
+  assertNonNegativeInt(couponDiscountMinor, 'discountMinor');
+  if (couponDiscountMinor > 0) {
+    lines.push({ kind: 'DISCOUNT', refId: null, description: input.discountLabel ?? 'Discount', quantity: 1, unitPriceMinor: -couponDiscountMinor, totalMinor: -couponDiscountMinor });
+  }
+  const discountMinor = memberDiscountMinor + couponDiscountMinor;
   const afterDiscount = subtotalMinor - discountMinor;
 
   let feesMinor = 0;

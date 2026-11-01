@@ -112,8 +112,8 @@ export function registerPublicRoutes(app: FastifyInstance) {
     handler: async ({ body, actor }) => {
       // Signed-in customers get per-customer coupon limits checked up front.
       const customerId = actor ? (await prisma.customerProfile.findUnique({ where: { userId: actor.userId }, select: { id: true } }))?.id : null;
-      const q = await quoteService({ ...body, customerId });
-      return { ...q.breakdown, offer: q.offer };
+      const q = await quoteService({ ...body, customerId, userId: actor?.userId ?? null });
+      return { ...q.breakdown, offer: q.offer, membership: q.membership };
     },
   });
 

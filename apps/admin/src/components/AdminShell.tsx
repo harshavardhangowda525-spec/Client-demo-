@@ -19,6 +19,7 @@ const NAV: { title: string; items: { href: string; label: string; perm: string }
   { title: 'Catalogue', items: [
     { href: '/services', label: 'Services & packages', perm: 'catalog.read' },
     { href: '/offers', label: 'Offers & coupons', perm: 'catalog.read' },
+    { href: '/memberships', label: 'Memberships', perm: 'catalog.read' },
     { href: '/locations', label: 'Locations & resources', perm: 'catalog.read' },
     { href: '/content', label: 'Content & messages', perm: 'content.manage' },
     { href: '/studio-site', label: 'Studio site', perm: 'content.manage' },

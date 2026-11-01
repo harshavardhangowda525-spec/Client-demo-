@@ -161,7 +161,7 @@ export async function createBooking(
   if (!location || !location.isActive || !location.brands.includes(input.brand)) throw notFound('Location');
 
   const quote = await quoteService(
-    { serviceId: input.serviceId, packageId: input.packageId, addOnIds: input.addOnIds, durationMin: input.durationMin, locationId: location.id, couponCode: input.couponCode },
+    { serviceId: input.serviceId, packageId: input.packageId, addOnIds: input.addOnIds, durationMin: input.durationMin, locationId: location.id, couponCode: input.couponCode, userId: actor?.userId ?? null },
     db,
   );
   if (quote.service.brand !== input.brand) throw notFound('Service');
@@ -203,8 +203,8 @@ export async function createBooking(
         // Re-check limits now that the customer is known, under a lock so the
         // last available use of a coupon can't be taken twice.
         await lockOffer(tx, quote.offer.id);
-        const again = await evaluateCoupon(quote.offer.code, { serviceId: quote.service.id, subtotalMinor: breakdown.subtotalMinor, customerId: customer.id }, tx, now);
-        if (again.discountMinor !== breakdown.discountMinor) throw new DomainError('CONFLICT', 'This offer changed while you were booking. Please review the price and try again.');
+        const again = await evaluateCoupon(quote.offer.code, { serviceId: quote.service.id, subtotalMinor: quote.couponBaseMinor, customerId: customer.id }, tx, now);
+        if (again.discountMinor !== quote.couponDiscountMinor) throw new DomainError('CONFLICT', 'This offer changed while you were booking. Please review the price and try again.');
       }
 
       return tx.booking.create({
@@ -244,7 +244,7 @@ export async function createBooking(
           offerId: quote.offer?.id ?? null,
           isDemo: opts.isDemo ?? false,
           items: { create: bookingItemsFromBreakdown(breakdown) },
-          ...(quote.offer ? { redemption: { create: { offerId: quote.offer.id, customerId: customer.id, discountMinor: breakdown.discountMinor } } } : {}),
+          ...(quote.offer ? { redemption: { create: { offerId: quote.offer.id, customerId: customer.id, discountMinor: quote.couponDiscountMinor } } } : {}),
           history: {
             create: {
               fromStatus: null,

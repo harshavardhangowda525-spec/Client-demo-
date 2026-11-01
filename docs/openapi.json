@@ -5491,6 +5491,369 @@
         }
       }
     },
+    "/api/v1/membership/plans": {
+      "get": {
+        "summary": "Membership plans on sale (prices from the database)",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Public.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/me/membership": {
+      "get": {
+        "summary": "The signed-in user's active membership (null when none)",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Public.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/me/memberships": {
+      "get": {
+        "summary": "Membership purchase history",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/membership/checkout": {
+      "post": {
+        "summary": "Start buying a plan (activates only after payment is verified)",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token). Rate limit: 10 per 10 minutes.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "planKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "planKey"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/membership/{id}/simulate": {
+      "post": {
+        "summary": "Demo mode only: complete or fail a simulated membership payment",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "success",
+                      "failure"
+                    ]
+                  }
+                },
+                "required": [
+                  "outcome"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/membership/{id}/razorpay/confirm": {
+      "post": {
+        "summary": "Razorpay checkout callback (signature and payment verified server-side)",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "razorpay_order_id": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "razorpay_payment_id": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "razorpay_signature": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "razorpay_order_id",
+                  "razorpay_payment_id",
+                  "razorpay_signature"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/membership/{id}/sync": {
+      "post": {
+        "summary": "Check with Razorpay whether a membership checkout was paid",
+        "tags": [
+          "Membership"
+        ],
+        "description": "Access: Signed-in user (session cookie or bearer token). Rate limit: 20 per 10 minutes.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/membership/plans": {
+      "get": {
+        "summary": "Membership plans with active member counts",
+        "tags": [
+          "Admin: membership"
+        ],
+        "description": "Access: Staff with permission `catalog.read`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a membership plan",
+        "tags": [
+          "Admin: membership"
+        ],
+        "description": "Access: Staff with permission `catalog.manage`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/membership/plans/{id}": {
+      "put": {
+        "summary": "Update a membership plan (price, discount, perks)",
+        "tags": [
+          "Admin: membership"
+        ],
+        "description": "Access: Staff with permission `catalog.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/memberships": {
+      "get": {
+        "summary": "Recent memberships",
+        "tags": [
+          "Admin: membership"
+        ],
+        "description": "Access: Staff with permission `customers.read`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/memberships/{id}/cancel": {
+      "post": {
+        "summary": "End a membership now (no refund issued)",
+        "tags": [
+          "Admin: membership"
+        ],
+        "description": "Access: Staff with permission `bookings.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Error: `{ \"error\": { \"code\", \"message\", \"details\"? } }`"
+          }
+        }
+      }
+    },
     "/api/v1/webhooks/razorpay": {
       "post": {
         "summary": "Razorpay webhook (HMAC-SHA256 signature over the raw body, de-duplicated by X-Razorpay-Event-Id)",
