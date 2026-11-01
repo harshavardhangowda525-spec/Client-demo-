@@ -2,11 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import '@fontsource-variable/roboto';
 import '@studio/ui/styles.css';
 import './theme.css';
+import './premium.css';
 import { DemoBar } from '@studio/ui';
 import { getMe, getSiteConfig, serverApi } from '@studio/ui/server';
 import { SessionProvider } from '../components/Session';
 import { StudioFooter } from '../components/StudioFooter';
 import { StudioHeader } from '../components/StudioHeader';
+import { getMembership } from '../lib/membership';
 import type { StudioCategory } from '../lib/types';
 import { BRAND } from '../site';
 
@@ -25,10 +27,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = { themeColor: '#ffffff' };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [config, categories, me] = await Promise.all([getSiteConfig(BRAND), serverApi<StudioCategory[]>('/api/v1/studio/categories'), getMe()]);
+  const [config, categories, me, membership] = await Promise.all([getSiteConfig(BRAND), serverApi<StudioCategory[]>('/api/v1/studio/categories'), getMe(), getMembership()]);
   return (
     <html lang="en-IN">
-      <body>
+      {/* Members see the premium (dark and gold) version of the whole site. */}
+      <body className={membership ? 'st-premium' : undefined} data-plan={membership?.plan.key}>
         <SessionProvider signedIn={!!me}>
         <a href="#main" className="skip-link">Skip to content</a>
         <DemoBar />

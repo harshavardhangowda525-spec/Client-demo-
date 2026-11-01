@@ -223,6 +223,7 @@ model User {
   followUps         EnquiryFollowUp[]
   assignedEnquiries EventEnquiry[]         @relation("EnquiryAssignee")
   refunds           Refund[]
+  memberships       Membership[]
 
   @@index([role])
   @@map("user")
@@ -1246,4 +1247,63 @@ model OfferRedemption {
 
   @@index([offerId])
   @@index([customerId, offerId])
+}
+
+// ── Memberships ─────────────────────────────────────────────────────────────
+
+enum MembershipStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  FAILED
+}
+
+/// A paid membership tier (e.g. Plus, Pro, Advanced) on the Infinity Studios site.
+model MembershipPlan {
+  id                 String   @id @default(cuid())
+  /// Stable identifier used in URLs (plus, pro, advanced)
+  key                String   @unique
+  name               String
+  tagline            String?
+  /// Price per period in paise
+  priceMinor         Int
+  periodDays         Int      @default(30)
+  /// Discount members get on bookings, in basis points (5000 = 50%)
+  bookingDiscountBps Int      @default(5000)
+  perks              String[]
+  sortOrder          Int      @default(0)
+  /// Shown as the recommended plan
+  isFeatured         Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  /// Sample pricing for the demo; labelled on the site
+  isSample           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+/// One purchase of a plan. At most one ACTIVE membership per user.
+model Membership {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId            String
+  plan              MembershipPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status            MembershipStatus @default(PENDING_PAYMENT)
+  amountMinor       Int
+  currency          String
+  provider          PaymentProvider
+  providerOrderId   String?          @unique
+  providerPaymentId String?          @unique
+  /// Demo or Razorpay test mode: no real money moved
+  isSimulated       Boolean
+  startsAt          DateTime?
+  endsAt            DateTime?
+  failureReason     String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, status])
 }

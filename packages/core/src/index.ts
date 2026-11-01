@@ -33,3 +33,4 @@ export * from './studio/admin';
 export * from './offers/service';
 export * from './reviews/service';
 export * from './tickets/service';
+export * from './membership/service';

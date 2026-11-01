@@ -22,6 +22,7 @@ export const DEMO_USERS = [
 ];
 
 const TABLES = [
+  'Membership', 'MembershipPlan',
   'OfferRedemption', 'OfferService', 'Offer', 'Review',
   'RescheduleRequest', 'EnquiryAttachment', 'SavedService', 'NotificationTemplate', 'ContentPage', 'Testimonial', 'HomeBanner',
   'ServiceEquipment', 'Equipment', 'ServiceDiscoveryCategory', 'DiscoveryCategory',
@@ -156,6 +157,7 @@ export async function seedDemo(opts: { force?: boolean; withSampleActivity?: boo
   }
   for (const p of data.contentPages) await prisma.contentPage.create({ data: { ...p, isTemplate: true } });
   await seedOffers(serviceIds);
+  await seedMembershipPlans();
 
   // Content
   const images = imageCatalog.images as Record<string, { alt: string }>;
@@ -295,13 +297,35 @@ async function seedOffers(serviceIds: Record<string, string>) {
   }
 }
 
+/** Sample membership plans for the demo. Prices and perks are placeholders, labelled as samples. */
+export const SAMPLE_MEMBERSHIP_PLANS = [
+  {
+    key: 'plus', name: 'Plus', tagline: 'For occasional shoots and sessions', priceMinor: 29_900, sortOrder: 1,
+    perks: ['Premium member website', 'Member badge on your account'],
+  },
+  {
+    key: 'pro', name: 'Pro', tagline: 'For creators who book every month', priceMinor: 59_900, sortOrder: 2, isFeatured: true,
+    perks: ['Premium member website', 'Member badge on your account', 'Priority support from the studio team'],
+  },
+  {
+    key: 'advanced', name: 'Advanced', tagline: 'For teams and production houses', priceMinor: 99_900, sortOrder: 3,
+    perks: ['Premium member website', 'Member badge on your account', 'Priority support from the studio team', 'Dedicated account contact'],
+  },
+];
+
+async function seedMembershipPlans() {
+  if ((await prisma.membershipPlan.count()) > 0) return 0;
+  await prisma.membershipPlan.createMany({ data: SAMPLE_MEMBERSHIP_PLANS.map((p) => ({ ...p, periodDays: 30, bookingDiscountBps: 5000, isSample: true })) });
+  return SAMPLE_MEMBERSHIP_PLANS.length;
+}
+
 /**
  * Adds the studio platform's demo content to a database created before it
  * existed. Purely additive: existing services, bookings, customers and content
  * are never changed or removed, so it is safe on a database with real bookings.
  */
 export async function topUpStudioContent() {
-  const added = { services: 0, categories: 0, equipment: 0, banners: 0, pages: 0, faqs: 0, offers: 0 };
+  const added = { services: 0, categories: 0, equipment: 0, banners: 0, pages: 0, faqs: 0, offers: 0, membershipPlans: 0 };
   const serviceIds: Record<string, string> = {};
   for (const s of data.services) {
     const existing = await prisma.service.findUnique({ where: { brand_slug: { brand: s.brand, slug: s.slug } } });
@@ -379,6 +403,7 @@ export async function topUpStudioContent() {
     await prisma.faq.createMany({ data: list.map((f, i) => ({ brand: 'STUDIO' as const, question: f.q, answer: f.a, sortOrder: i, isDemo: true })) });
     added.faqs = list.length;
   }
+  added.membershipPlans = await seedMembershipPlans();
   return added;
 }
 
@@ -386,11 +411,11 @@ const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].repla
 if (isMain) {
   const ifEmpty = process.argv.includes('--if-empty');
   (ifEmpty
-    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.discoveryCategory.count({ where: { slug: 'events' } })]).then(([users, studio, events]) => {
+    ? Promise.all([prisma.user.count(), prisma.discoveryCategory.count(), prisma.discoveryCategory.count({ where: { slug: 'events' } }), prisma.membershipPlan.count()]).then(([users, studio, events, plans]) => {
         const skip = { users: [] as { email: string; role: string; password: string }[] };
         if (users === 0) return seedDemo({ force: process.argv.includes('--force') });
-        // Up to date when the newest demo content (the Events category) is present.
-        if (studio > 0 && events > 0) {
+        // Up to date when the newest demo content (membership plans) is present.
+        if (studio > 0 && events > 0 && plans > 0) {
           console.info('Database already has data: skipping demo seed (--if-empty).');
           return skip;
         }

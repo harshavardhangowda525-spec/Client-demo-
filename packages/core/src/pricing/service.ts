@@ -3,6 +3,8 @@ import { DomainError, invalid, notFound } from '../errors';
 import { getSetting } from '../settings';
 import { calculatePrice, type PriceBreakdown, type PricingInput } from './engine';
 import { evaluateCoupon } from '../offers/service';
+import { memberDiscountFor } from '../membership/service';
+import { applyBps } from '../money';
 
 export interface QuoteRequest {
   serviceId: string;
@@ -14,6 +16,8 @@ export interface QuoteRequest {
   couponCode?: string | null;
   /** Known customer, so per-customer coupon limits apply. */
   customerId?: string | null;
+  /** Signed-in user; an active membership gives member prices. */
+  userId?: string | null;
 }
 
 export interface ResolvedQuote {
@@ -23,6 +27,10 @@ export interface ResolvedQuote {
   durationMin: number;
   breakdown: PriceBreakdown;
   offer: { id: string; code: string; title: string } | null;
+  /** Coupon part of the discount, and the amount it was worked out on. */
+  couponDiscountMinor: number;
+  couponBaseMinor: number;
+  membership: { planName: string; bps: number; discountMinor: number } | null;
 }
 
 /** Validate a requested duration against a service's rules. */
@@ -99,13 +107,26 @@ export async function quoteService(req: QuoteRequest, db: Db = prisma): Promise<
     minimumDepositMinor: pricing.minimumDepositMinor,
   };
   let breakdown = calculatePrice(input);
+  // Signed-in members get their plan's booking discount first.
+  let membership: ResolvedQuote['membership'] = null;
+  const member = await memberDiscountFor(req.userId, db);
+  if (member) {
+    const memberDiscountMinor = applyBps(breakdown.subtotalMinor, member.bps);
+    input.memberDiscountMinor = memberDiscountMinor;
+    input.memberDiscountLabel = `${member.planName} member price (${member.bps / 100}% off)`;
+    breakdown = calculatePrice(input);
+    membership = { planName: member.planName, bps: member.bps, discountMinor: memberDiscountMinor };
+  }
+  const couponBaseMinor = breakdown.subtotalMinor - (membership?.discountMinor ?? 0);
   let offer: ResolvedQuote['offer'] = null;
+  let couponDiscountMinor = 0;
   if (req.couponCode?.trim()) {
-    // Discounts apply to the service and add-ons, before fees and tax.
-    const { offer: o, discountMinor } = await evaluateCoupon(req.couponCode, { serviceId: service.id, subtotalMinor: breakdown.subtotalMinor, customerId: req.customerId }, db);
+    // Coupons apply to what is left after the member price, before fees and tax.
+    const { offer: o, discountMinor } = await evaluateCoupon(req.couponCode, { serviceId: service.id, subtotalMinor: couponBaseMinor, customerId: req.customerId }, db);
     breakdown = calculatePrice({ ...input, discountMinor, discountLabel: `Offer ${o.code}` });
     offer = { id: o.id, code: o.code, title: o.title };
+    couponDiscountMinor = breakdown.discountMinor - (membership?.discountMinor ?? 0);
   }
 
-  return { service, pkg, addOns, durationMin, breakdown, offer };
+  return { service, pkg, addOns, durationMin, breakdown, offer, couponDiscountMinor, couponBaseMinor, membership };
 }
