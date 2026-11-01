@@ -17,10 +17,16 @@ export default async function MembershipPage() {
       <section className="mb-hero">
         <div className="container">
           <p className="mb-eyebrow">Infinity Premium</p>
-          <h1>Book more. Pay half.</h1>
-          <p className="mb-hero__lead">Members pay 50% less on every studio session, shoot and package, and get the premium member experience across the site.</p>
-          {membership && (
-            <p className="mb-hero__status" role="status">You are a <strong>{membership.plan.name}</strong> member until {ends}.</p>
+          {membership ? (
+            <>
+              <h1>Your membership</h1>
+              <p className="mb-hero__lead">You are a <strong>{membership.plan.name}</strong> member until {ends}. Renew, or switch plan whenever you like.</p>
+            </>
+          ) : (
+            <>
+              <h1>Book more. Pay half.</h1>
+              <p className="mb-hero__lead">Members pay 50% less on every studio session, shoot and package, and get the premium member experience across the site.</p>
+            </>
           )}
         </div>
       </section>
@@ -31,7 +37,13 @@ export default async function MembershipPage() {
           {isStaff ? (
             <div className="alert alert--info">You are signed in with a staff account. Memberships are for customer accounts.</div>
           ) : plans.length ? (
-            <MembershipPlans plans={plans} signedIn={!!me} currentPlanKey={membership?.plan.key ?? null} paymentsMode={config.integrations.paymentsMode} />
+            <MembershipPlans
+              plans={plans}
+              signedIn={!!me}
+              currentPlanKey={membership?.plan.key ?? null}
+              paymentsMode={config.integrations.paymentsMode}
+              member={membership ? { holderName: me?.profile.fullName ?? me?.user.name ?? 'Member', startsAt: membership.startsAt, endsAt: membership.endsAt, isSimulated: membership.isSimulated, now: new Date().toISOString() } : null}
+            />
           ) : (
             <div className="empty">No membership plans are on sale right now.</div>
           )}

@@ -202,6 +202,16 @@ test.describe('Infinity Studios platform', () => {
     await expect(page.getByRole('heading', { name: /Members pay 50% less/ })).toHaveCount(0);
     await expect(page.locator('.mb-price__now').first()).toBeVisible();
 
+    // Manage membership: the active plan as a card, the other plans below to switch to.
+    await page.getByRole('link', { name: 'Manage membership' }).click();
+    await expect(page.getByRole('heading', { name: 'Your membership' })).toBeVisible();
+    await expect(page.locator('.mb-card')).toContainText('Pro');
+    await expect(page.getByRole('button', { name: /Renew Pro/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Switch to another plan' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch to Plus' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch to Advanced' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch to Pro' })).toHaveCount(0);
+
     // Checkout applies the member price on the server's breakdown.
     await page.goto(`${S}/service/portrait-photography/slots?date=${weekday(16)}`);
     await page.locator('.st-time').first().click();
